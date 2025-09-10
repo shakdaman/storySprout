@@ -1,0 +1,134 @@
+// User Types
+export interface Parent {
+  id: string;
+  email: string;
+  displayName: string;
+  photoURL?: string;
+  createdAt: Date;
+  children: string[]; // Array of child IDs
+}
+
+export interface Child {
+  id: string;
+  parentId: string;
+  name: string;
+  username: string;
+  pin: string;
+  avatar: string;
+  createdAt: Date;
+  preferences: {
+    readingLevel: 'beginner' | 'intermediate' | 'advanced';
+    interests: string[];
+  };
+}
+
+// Story and Quiz Types
+export interface Story {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  createdAt: Date;
+  readingLevel: 'beginner' | 'intermediate' | 'advanced';
+  estimatedReadingTime: number; // in minutes
+  tags: string[];
+  quizId: string;
+}
+
+export interface Quiz {
+  id: string;
+  storyId: string;
+  title: string;
+  questions: QuizQuestion[];
+  createdAt: Date;
+}
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  options: string[];
+  correctAnswer: number; // index of correct option
+  explanation?: string;
+}
+
+export interface QuizResult {
+  id: string;
+  childId: string;
+  quizId: string;
+  storyId: string;
+  answers: number[]; // array of selected answer indices
+  score: number;
+  totalQuestions: number;
+  completedAt: Date;
+  timeSpent: number; // in seconds
+}
+
+// Activity and Progress Types
+export interface ReadingActivity {
+  id: string;
+  childId: string;
+  storyId: string;
+  startedAt: Date;
+  completedAt?: Date;
+  timeSpent: number; // in seconds
+  isCompleted: boolean;
+}
+
+export interface ChildProgress {
+  childId: string;
+  totalStoriesRead: number;
+  totalQuizzesTaken: number;
+  averageQuizScore: number;
+  totalReadingTime: number; // in minutes
+  streak: number; // consecutive days of reading
+  lastActivityDate: Date;
+  achievements: Achievement[];
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  unlockedAt: Date;
+  category: 'reading' | 'quiz' | 'streak' | 'milestone';
+}
+
+// Component Props Types
+export interface AuthContextType {
+  user: Parent | null;
+  loading: boolean;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+export interface ChildContextType {
+  currentChild: Child | null;
+  setCurrentChild: (child: Child | null) => void;
+  children: Child[];
+  loading: boolean;
+  getChildById: (childId: string) => Promise<Child | null>;
+}
+
+// API Response Types
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+}
+
+// Form Types
+export interface CreateChildForm {
+  name: string;
+  username: string;
+  pin: string;
+  avatar: string;
+  readingLevel: 'beginner' | 'intermediate' | 'advanced';
+  interests: string[];
+}
+
+export interface LoginForm {
+  username: string;
+  pin: string;
+}
