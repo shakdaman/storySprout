@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Play, Database, BarChart3, RefreshCw } from 'lucide-react';
 import { N8NDatabaseService } from '../services/n8nDatabase';
 import { seedN8NDatabase, testN8NDatabase } from '../utils/n8nTestData';
+import { N8NCollectionManager } from '../utils/createN8NCollection';
 import type { N8NStoryData, N8NCollectionStats } from '../types';
 
 const N8NTestComponent: React.FC = () => {
@@ -11,6 +12,23 @@ const N8NTestComponent: React.FC = () => {
 
   const addResult = (message: string) => {
     setResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${message}`]);
+  };
+
+  const handleRecreateCollection = async () => {
+    setLoading(true);
+    setResults([]);
+    addResult('🚀 Starting collection recreation...');
+    addResult('📍 Target database: storysprout-a1166');
+    
+    try {
+      await N8NCollectionManager.recreateCollection();
+      addResult('🎉 Collection recreated successfully!');
+      await loadStats();
+    } catch (error) {
+      addResult(`❌ Error recreating collection: ${error}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSeedDatabase = async () => {
@@ -85,7 +103,16 @@ const N8NTestComponent: React.FC = () => {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <button
+          onClick={handleRecreateCollection}
+          disabled={loading}
+          className="flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <RefreshCw className="h-5 w-5 mr-2" />
+          Recreate Collection
+        </button>
+
         <button
           onClick={handleSeedDatabase}
           disabled={loading}
@@ -179,6 +206,7 @@ const N8NTestComponent: React.FC = () => {
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 className="font-semibold text-blue-900 mb-2">How to use this test panel:</h4>
         <ul className="text-sm text-blue-800 space-y-1">
+          <li><strong>Recreate Collection:</strong> Clears and recreates the n8n collection in the correct database</li>
           <li><strong>Seed Database:</strong> Populates the database with sample n8n story data</li>
           <li><strong>Run Tests:</strong> Tests all database operations (create, read, update, delete)</li>
           <li><strong>Load Stats:</strong> Shows current collection statistics</li>
