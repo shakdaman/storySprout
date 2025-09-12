@@ -9,6 +9,7 @@ import ChildLogin from './pages/ChildLogin';
 import ChildDashboard from './pages/ChildDashboard';
 import StoryReader from './pages/StoryReader';
 import QuizPage from './pages/QuizPage';
+import N8NTestPage from './pages/N8NTestPage';
 import LoadingSpinner from './components/LoadingSpinner';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<ParentDashboard />} />
                     <Route path="/dashboard" element={<ParentDashboard />} />
+                    <Route path="/n8n-test" element={<N8NTestPage />} />
                   </Routes>
                 </ProtectedRoute>
               } 
