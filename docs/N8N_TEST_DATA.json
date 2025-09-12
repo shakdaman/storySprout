@@ -1,0 +1,48 @@
+{
+  "studentName": "Test Student",
+  "grade": 5,
+  "storyTitle": "N8N Connection Test Story",
+  "storyBody": "This is a test story created by n8n to verify the Firebase connection is working properly. If you can see this document in Firestore, then the authentication and connection are successful!",
+  "vocabulary": [
+    {
+      "word": "Test",
+      "definition": "A procedure intended to establish the quality, performance, or reliability of something."
+    },
+    {
+      "word": "Connection",
+      "definition": "A relationship in which a person or thing is linked or associated with something else."
+    }
+  ],
+  "imagePrompt": "A simple test illustration showing a successful connection between n8n and Firebase",
+  "quiz": {
+    "multipleChoice": [
+      {
+        "question": "What is this document?",
+        "options": [
+          "A real story",
+          "A test document",
+          "An error message",
+          "A database backup"
+        ],
+        "answer": "A test document"
+      }
+    ],
+    "openEnded": [
+      {
+        "question": "What does this test document prove?",
+        "sampleAnswer": "This test document proves that n8n can successfully connect to and write data to the Firebase Firestore database."
+      }
+    ]
+  },
+  "recipientType": "student",
+  "recipientEmail": "test@example.com",
+  "subject": "N8N Test Story - Connection Verified! 🎉",
+  "status": "pending",
+  "metadata": {
+    "n8nWorkflowId": "test-connection-workflow",
+    "n8nExecutionId": "{{ $executionId }}",
+    "deliveryAttempts": 0,
+    "testMode": true,
+    "createdAt": "{{ $now }}"
+  }
+}
