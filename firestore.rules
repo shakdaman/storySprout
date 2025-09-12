@@ -38,5 +38,20 @@ service cloud.firestore {
     match /achievements/{achievementId} {
       allow read, write: if request.auth != null;
     }
+    
+    // N8N Automation Collections
+    // Allow authenticated users to read n8n story data
+    match /n8nStories/{storyId} {
+      allow read: if request.auth != null;
+      // Only allow write for system/admin operations (you may want to restrict this further)
+      allow write: if request.auth != null;
+    }
+    
+    // Allow authenticated users to read email campaigns
+    match /emailCampaigns/{campaignId} {
+      allow read: if request.auth != null;
+      // Only allow write for system/admin operations
+      allow write: if request.auth != null;
+    }
   }
 }
