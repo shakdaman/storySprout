@@ -4,6 +4,7 @@ import { ChildProvider } from './contexts/ChildContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ChildProtectedRoute from './components/ChildProtectedRoute';
 import ParentDashboard from './pages/ParentDashboard';
+import ParentLogin from './pages/ParentLogin';
 import ChildLogin from './pages/ChildLogin';
 import ChildDashboard from './pages/ChildDashboard';
 import StoryReader from './pages/StoryReader';
@@ -17,6 +18,7 @@ function App() {
         <div className="App">
           <Routes>
             {/* Parent Routes */}
+            <Route path="/parent/login" element={<ParentLogin />} />
             <Route 
               path="/parent/*" 
               element={
