@@ -11,12 +11,12 @@
           ]
         }
       },
-      "id": "50ba67e5-4ecb-45f8-903b-6097fb3b9202",
+      "id": "70dfe632-4108-457d-805e-13888783b9e8",
       "name": "Daily Story Generation",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
       "position": [
-        0,
+        -2160,
         0
       ]
     },
@@ -27,14 +27,14 @@
         "projectId": "storysprout-a1166",
         "collection": "n8nStories",
         "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
-        "columns": "productID"
+        "columns": "desciption"
       },
-      "id": "afa2dde9-f960-4a06-9b40-7d5a0aaabd3c",
+      "id": "e6ed55fc-1385-4da0-9f22-4a574bb293e3",
       "name": "Create Story Document",
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1,
       "position": [
-        224,
+        -1936,
         0
       ],
       "credentials": {
@@ -46,48 +46,94 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the JSON response from Idea Spark\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message);\n}"
+        "promptType": "define",
+        "text": "You are an AI brainstormer specializing in generating creative and educational story ideas for children in the 5th and 6th grade (ages 10-12). Your goal is to produce a constant stream of unique and engaging concepts.\n\nCRITICAL INSTRUCTIONS:\n- Generate a single, compelling story idea\n- The main characters MUST be two brothers named Angel (6th grader) and Jayson (5th grader)\n- The story idea should be suitable for a short story of approximately 1200-1500 words\n- Generate a valuable, age-appropriate life lesson or moral that can be naturally integrated into the story\n- Examples of good morals include: perseverance, teamwork, honesty, empathy, problem-solving, courage, responsibility, kindness, creativity, or friendship\n- To ensure variety, please choose a genre from the following list for this story: Sci-Fi, Fantasy, Mystery, Adventure, Historical Fiction, Comedy\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nJSON OUTPUT STRUCTURE:\n{\n  \"prompt\": \"A one-sentence summary of the story idea. Example: 'Angel and Jayson discover a mysterious old compass that doesn't point north, leading them on an adventure to find a hidden waterfall in their local state park.'\",\n  \"moral\": \"A concise statement of the moral lesson. Example: 'The importance of trusting your instincts and working together to solve a puzzle.'\",\n  \"genre\": \"The selected genre from the list above\",\n  \"estimatedLength\": \"1200-1500 words\"\n}",
+        "options": {}
       },
-      "id": "7188f2dd-5ee8-4f41-a30c-63334406bd23",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1712,
+        0
+      ],
+      "id": "7618648f-d7d2-4bbf-b4c7-72e50f09da93",
+      "name": "Idea Spark"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Idea Spark (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
+      },
+      "id": "bab8ca4f-9306-451c-bf2c-5da0fce32a48",
       "name": "Parse Idea JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        800,
+        -1488,
         0
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Parse the JSON response from Plot Architect\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message);\n}"
+        "promptType": "define",
+        "text": "=You are a master storyteller and child development expert, tasked with creating a structured plot outline for a children's story. Your audience is 5th and 6th graders. The story must be engaging, thoughtful, and clearly embed a valuable life lesson.\n\nCRITICAL INSTRUCTIONS:\n- The main characters MUST be named Angel (a 6th grader) and Jayson (a 5th grader)\n- The tone should be adventurous and positive, suitable for ages 10-12\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nUSER STORY INPUT:\nCore Idea: {{ $json.prompt }}\nMoral to Teach: {{ $json.moral }}\nGenre: {{ $json.genre }}\n\nJSON OUTPUT STRUCTURE:\n{\n  \"title\": \"A creative and engaging title for the story, under 10 words\",\n  \"logline\": \"A one-sentence summary of the entire story\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A brief, one-sentence description of Angel's personality and role in this specific story\"\n    },\n    {\n      \"name\": \"Jayson\", \n      \"description\": \"A brief, one-sentence description of Jayson's personality and role in this specific story\"\n    }\n  ],\n  \"setting\": \"A vivid, one-paragraph description of the story's primary setting and atmosphere\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Brief description of how the story begins\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"The event that starts the main conflict\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"The main challenge or obstacle\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"The most exciting moment where the moral is tested\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"How the story ends and the moral is demonstrated\"\n    }\n  ],\n  \"moral_lesson_summary\": \"A brief, one-sentence explanation of how the plot's resolution teaches the specified moral\"\n}",
+        "options": {}
       },
-      "id": "044629c0-74ad-4e65-a180-9bc57b2090ce",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1264,
+        0
+      ],
+      "id": "8bbcc2d3-a20f-442f-bc7a-c119603746c1",
+      "name": "Plot Architect"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Plot Architect (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
+      },
+      "id": "9df7636d-29c5-4e71-aa71-f684624d4bb0",
       "name": "Parse Plot JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1376,
+        -1040,
         0
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Split the story into scenes for image generation\nconst storyText = $input.first().json.content[0].text;\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
+        "promptType": "define",
+        "text": "=You are a world-class author of children's fiction, specializing in chapter books for 10-12 year olds. Your task is to write a complete story based on the provided plot outline.\n\nCRITICAL INSTRUCTIONS:\n- Adhere strictly to the provided plot outline\n- Do not deviate from the characters, setting, or scene descriptions\n- Write in a clear, engaging, and age-appropriate style\n- Use descriptive language and realistic dialogue\n- The total story length should be between 1200 and 1500 words\n- Ensure the moral of the story is demonstrated through the characters' actions and dialogue, especially during the climax and resolution\n- Do not add any titles, headings, or author notes\n- Write only the body of the story itself\n- Make sure Angel and Jayson feel like real brothers with distinct personalities\n- Include dialogue that sounds natural for their ages\n- Use vocabulary appropriate for 5th-6th grade readers\n- Create vivid descriptions that help readers visualize the scenes\n\nPLOT OUTLINE:\n{{ $json }}\n\nBegin writing the story now. Remember to show, don't tell, and let the moral lesson emerge naturally through the characters' journey.",
+        "options": {}
       },
-      "id": "52f5318c-6a1a-49d1-babc-ec385806b457",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -816,
+        0
+      ],
+      "id": "ed617eec-242d-4b24-9ac6-893a72554486",
+      "name": "Narrative Weaver"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the story into scenes for image generation\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (response.output) {\n  // LangChain agent response structure\n  storyText = response.output;\n} else if (response.text) {\n  // Direct text response\n  storyText = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  storyText = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  storyText = response;\n} else {\n  // Try to find text in the response\n  storyText = response.message || response.response || JSON.stringify(response);\n}\n\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
+      },
+      "id": "1cf67278-2324-4487-a2ba-607c8c2e7877",
       "name": "Split Into Scenes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1952,
+        -592,
         0
       ]
     },
     {
       "parameters": {
+        "method": "POST",
         "url": "https://queue.fal.run/fal-ai/nano-banana",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "falAiApi",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -116,18 +162,73 @@
         },
         "options": {}
       },
-      "id": "6598c7d3-acce-4106-b2d3-a6b67c9a2bdd",
+      "id": "4e1f030f-6a7a-47b8-a112-72bca79d61fd",
       "name": "Generate Image",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2176,
+        -368,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Weeuuv18hA6Ijh41",
+          "name": "fal.ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 15,
+        "unit": "seconds"
+      },
+      "id": "wait-for-generation",
+      "name": "Wait for Image Generation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -144,
         0
       ]
     },
     {
       "parameters": {
-        "url": "={{ $json.images[0].url }}",
+        "url": "={{ $json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "poll-status",
+      "name": "Poll Generation Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        0
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Weeuuv18hA6Ijh41",
+          "name": "fal.ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if image generation is complete and extract image URL\nconst response = $input.first().json;\n\nconsole.log('Checking status:', response.status);\nconsole.log('Queue position:', response.metrics?.queue_position);\n\n// If still in queue, throw error to trigger retry\nif (response.status === 'IN_QUEUE') {\n  const queuePos = response.metrics?.queue_position || 'unknown';\n  throw new Error(`Image still generating. Queue position: ${queuePos}. Retrying...`);\n}\n\n// If completed, extract image URL\nif (response.status === 'COMPLETED') {\n  const images = response.images || [];\n  if (images.length > 0) {\n    return {\n      json: {\n        imageUrl: images[0].url,\n        requestId: response.request_id,\n        status: response.status,\n        originalResponse: response\n      }\n    };\n  } else {\n    throw new Error('No images found in completed response');\n  }\n}\n\n// Handle failed status\nif (response.status === 'FAILED') {\n  throw new Error(`Image generation failed: ${response.error || 'Unknown error'}`);\n}\n\n// Handle other statuses\nthrow new Error(`Unexpected status: ${response.status}`);"
+      },
+      "id": "check-generation-status",
+      "name": "Check Generation Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.imageUrl }}",
         "options": {
           "response": {
             "response": {
@@ -138,12 +239,12 @@
           }
         }
       },
-      "id": "759a3040-af62-4fd0-9c23-6e2cb19bcf3f",
+      "id": "00576012-a37f-4d25-9300-fe25ec852dae",
       "name": "Download Image",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2400,
+        304,
         0
       ]
     },
@@ -152,81 +253,47 @@
         "operation": "upload",
         "requestOptions": {}
       },
-      "id": "9b4b6c16-a937-4f21-a281-a10673b4afa8",
+      "id": "a86589c4-1df5-468f-ab92-6e7cc39cd5b1",
       "name": "Upload to Firebase Storage",
       "type": "n8n-nodes-base.googleCloudStorage",
       "typeVersion": 1,
       "position": [
-        2624,
+        288,
         0
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst storyText = $('Agent 2: Narrative Weaver').first().json.content[0].text;\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
+        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  // LangChain agent response structure\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  // Direct text response\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  // Anthropic-style response structure\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  // String response\n  storyText = narrativeResponse;\n} else {\n  // Try to find text in the response\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
       },
-      "id": "86d5a04d-5487-4808-a6fd-12c3b1fc1bb6",
+      "id": "c9afb4d7-89c4-425b-b9ac-87a1004e5365",
       "name": "Aggregate Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2848,
+        512,
         0
       ]
     },
     {
       "parameters": {
+        "authentication": "serviceAccount",
         "operation": "update"
       },
-      "id": "7e707453-38e2-4791-a5de-ef6628ebeed5",
+      "id": "bff4c4c4-4599-4a08-84d2-dfeae38b19de",
       "name": "Finalize Story",
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1,
       "position": [
-        3072,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=You are an AI brainstormer specializing in generating creative and educational story ideas for children in the 5th and 6th grade (ages 10-12). Your goal is to produce a constant stream of unique and engaging concepts.\n\nCRITICAL INSTRUCTIONS:\n- Generate a single, compelling story idea\n- The main characters MUST be two brothers named Angel (6th grader) and Jayson (5th grader)\n- The story idea should be suitable for a short story of approximately 1200-1500 words\n- Generate a valuable, age-appropriate life lesson or moral that can be naturally integrated into the story\n- Examples of good morals include: perseverance, teamwork, honesty, empathy, problem-solving, courage, responsibility, kindness, creativity, or friendship\n- To ensure variety, please choose a genre from the following list for this story: Sci-Fi, Fantasy, Mystery, Adventure, Historical Fiction, Comedy\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nJSON OUTPUT STRUCTURE:\n{\n  \"prompt\": \"A one-sentence summary of the story idea. Example: 'Angel and Jayson discover a mysterious old compass that doesn't point north, leading them on an adventure to find a hidden waterfall in their local state park.'\",\n  \"moral\": \"A concise statement of the moral lesson. Example: 'The importance of trusting your instincts and working together to solve a puzzle.'\",\n  \"genre\": \"The selected genre from the list above\",\n  \"estimatedLength\": \"1200-1500 words\"",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
-      "position": [
-        448,
+        736,
         0
       ],
-      "id": "e748eb80-8764-4448-bfb5-87ef453d360c",
-      "name": "Idea Spark"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
-      "position": [
-        1024,
-        0
-      ],
-      "id": "850528bc-4890-4d86-9394-b6609c16d7d9",
-      "name": "Plot Architect"
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
-      "position": [
-        1600,
-        0
-      ],
-      "id": "a1dbb8f6-b3ff-4793-9f7a-5338b82552d6",
-      "name": "Narrative Weaver"
+      "credentials": {
+        "googleApi": {
+          "id": "r5aO2VLm91P11JaS",
+          "name": "Firestore"
+        }
+      }
     },
     {
       "parameters": {
@@ -236,10 +303,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        520,
+        -1648,
         224
       ],
-      "id": "4a84fad4-b15f-4013-b8bc-845de695ea66",
+      "id": "3343d82e-d75c-49d4-9f18-6b17398d0ab6",
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": {
@@ -250,15 +317,16 @@
     },
     {
       "parameters": {
+        "modelName": "models/gemini-2.5-pro",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        1096,
+        -1216,
         224
       ],
-      "id": "783e2def-9559-4092-beb2-d1f4560be296",
+      "id": "69e0eb36-c77d-4809-9d63-b90ca393bb11",
       "name": "Google Gemini Chat Model1",
       "credentials": {
         "googlePalmApi": {
@@ -269,15 +337,16 @@
     },
     {
       "parameters": {
+        "modelName": "models/gemini-2.5-pro",
         "options": {}
       },
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        1672,
+        -768,
         224
       ],
-      "id": "99e26ef3-da49-4834-8e4b-7e583328c6d0",
+      "id": "6fa84b87-10c7-459c-8727-1b653fba07b0",
       "name": "Google Gemini Chat Model2",
       "credentials": {
         "googlePalmApi": {
@@ -287,7 +356,251 @@
       }
     }
   ],
-  "pinData": {},
+  "pinData": {
+    "Create Story Document": [
+      {
+        "json": {
+          "_name": "projects/storysprout-a1166/databases/(default)/documents/n8nStories/2025-09-30-233307-story",
+          "_id": "2025-09-30-233307-story",
+          "_createTime": "2025-09-30T21:33:08.073159Z",
+          "_updateTime": "2025-09-30T21:33:08.073159Z",
+          "desciption": null
+        }
+      }
+    ],
+    "Idea Spark": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"prompt\": \"Sixth-grader Angel and his younger brother Jayson discover a strange, metallic pod in the woods that can record and play back sounds from a few minutes into the future, forcing them to take responsibility when they hear an impending accident they must race to prevent.\",\n  \"moral\": \"Understanding that having a special ability or knowledge comes with the responsibility to use it for good, even when it's difficult.\",\n  \"genre\": \"Sci-Fi\",\n  \"estimatedLength\": \"1200-1500 words\"\n}\n```"
+        }
+      }
+    ],
+    "Parse Idea JSON": [
+      {
+        "json": {
+          "prompt": "Sixth-grader Angel and his younger brother Jayson discover a strange, metallic pod in the woods that can record and play back sounds from a few minutes into the future, forcing them to take responsibility when they hear an impending accident they must race to prevent.",
+          "moral": "Understanding that having a special ability or knowledge comes with the responsibility to use it for good, even when it's difficult.",
+          "genre": "Sci-Fi",
+          "estimatedLength": "1200-1500 words"
+        }
+      }
+    ],
+    "Plot Architect": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"title\": \"The Secret of the Founder's Map\",\n  \"logline\": \"Two students with clashing personalities must learn to work together using an ancient map to uncover their town's forgotten history.\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan.\"\n    },\n    {\n      \"name\": \"Jayson\",\n      \"description\": \"An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles.\"\n    }\n  ],\n  \"setting\": \"The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Paired for a history project, studious Angel and impulsive Jayson bicker in the school library, unable to agree on a topic.\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"Jayson accidentally knocks a loose book, revealing a hidden compartment containing a cryptic, hand-drawn map signed by the town's founders.\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"They follow the map's trail through Oakhaven, with Angel deciphering historical riddles and Jayson solving physical puzzles, slowly and grudgingly realizing they need each other's different skills to progress.\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"At the final location, the old clock tower, they face a complex puzzle that requires Angel's code-breaking and Jayson's mechanical tinkering to be performed at the same time, forcing them to finally trust each other completely to succeed.\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"They unearth the time capsule, which contains not treasure, but a message about community and collaboration. They present their amazing discovery for their project, earning an A+ and forging a new friendship built on mutual respect for their unique talents.\"\n    }\n  ],\n  \"moral_lesson_summary\": \"The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team.\"\n}\n```"
+        }
+      }
+    ],
+    "Parse Plot JSON": [
+      {
+        "json": {
+          "title": "The Secret of the Founder's Map",
+          "logline": "Two students with clashing personalities must learn to work together using an ancient map to uncover their town's forgotten history.",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ],
+          "setting": "The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.",
+          "plot_points": [
+            {
+              "scene": 1,
+              "title": "Opening",
+              "description": "Paired for a history project, studious Angel and impulsive Jayson bicker in the school library, unable to agree on a topic."
+            },
+            {
+              "scene": 2,
+              "title": "Inciting Incident",
+              "description": "Jayson accidentally knocks a loose book, revealing a hidden compartment containing a cryptic, hand-drawn map signed by the town's founders."
+            },
+            {
+              "scene": 3,
+              "title": "Rising Action",
+              "description": "They follow the map's trail through Oakhaven, with Angel deciphering historical riddles and Jayson solving physical puzzles, slowly and grudgingly realizing they need each other's different skills to progress."
+            },
+            {
+              "scene": 4,
+              "title": "Climax",
+              "description": "At the final location, the old clock tower, they face a complex puzzle that requires Angel's code-breaking and Jayson's mechanical tinkering to be performed at the same time, forcing them to finally trust each other completely to succeed."
+            },
+            {
+              "scene": 5,
+              "title": "Resolution",
+              "description": "They unearth the time capsule, which contains not treasure, but a message about community and collaboration. They present their amazing discovery for their project, earning an A+ and forging a new friendship built on mutual respect for their unique talents."
+            }
+          ],
+          "moral_lesson_summary": "The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team."
+        }
+      }
+    ],
+    "Narrative Weaver": [
+      {
+        "json": {
+          "output": "The summer sun beat down on the community park, making the freshly cut grass smell sweet and sharp. The air buzzed with the excited shouts of kids and the thud of soccer balls. Angel, twelve years old and with feet that moved like lightning, scanned the crowd. His eyes, however, weren't on the other players. They were fixed on the table near the concession stand where Coach Davis was standing. Next to the coach, winking in the sunlight, was the grand prize: a golden trophy so big and shiny it looked like it belonged to a professional league.\n\nCoach Davis blew his whistle, a sharp tweet that cut through the noise. “Alright, listen up, Fireballs! This year, we’re doing something different for our end-of-summer event. It’s the first-ever Summer Soccer Sprint! A two-on-two tournament. The winning pair takes home the gold.”\n\nA murmur of excitement rippled through the teams. Angel felt a jolt, a surge of pure ambition. He could already picture it: that gleaming trophy on the shelf in his room. He’d win it. He had to.\n\n“I’ll post the team pairings now,” the coach continued, tacking a sheet of paper to the bulletin board.\n\nAngel’s ten-year-old brother, Jayson, bounced on the balls of his feet beside him. “I hope we get paired together! We’d be unstoppable!”\n\nAngel managed a tight smile. He loved his brother, but Jayson was… well, he was Jayson. Eager, full of ideas, but his feet sometimes got tangled up when he was trying to do a simple crossover. Angel was the star. He was the one who scored the goals. To win that trophy, he needed a clear path to the net, not a well-meaning roadblock. When he saw their names on the list side-by-side—*Angel & Jayson Martinez*—a knot of frustration tightened in his stomach. This just got a lot harder.\n\nDuring their first practice session, the problem became clear. Angel zipped across the small field, the ball a magnet to his cleats. “Jayson, over here!” he’d shout, and Jayson would dutifully pass. But Angel never passed back. He’d deke, spin, and fire a shot into the net.\n\n“Awesome goal!” Jayson panted, running up to him. “Hey, I was thinking, if I draw the defender to the left, you could cut right and—”\n\n“Don’t worry about strategy,” Angel cut him off, not unkindly, but with a finality that stung. “Just get the ball and pass it to me. I’ll handle the rest.”\n\nJayson’s face fell. He kicked at a loose clump of grass. “Oh. Okay.” For the rest of the practice, he was quieter, his movements less certain. They were on the same team, but they weren't playing together.\n\nTheir first match was against a much weaker team, a pair of twins who were still learning to control their passes. Angel scored both goals for a 2-1 victory, but it wasn't the easy win he’d expected. He was drenched in sweat and his legs ached from doing all the work. On the final play, with the other team about to tie the score, Jayson had thrown himself in front of a powerful shot, blocking it with his shin. The ball ricocheted out of bounds as the whistle blew. Angel gave him a quick, dismissive nod and jogged off for a water bottle, barely acknowledging that his brother had just saved the game. From the sidelines, Coach Davis watched them, his expression thoughtful.\n\nBefore their next match, the coach pulled Angel aside, away from the cheering crowd. “Nice win out there,” he said, his voice calm.\n\n“Thanks, Coach,” Angel said, puffing out his chest a little. “I got both goals.”\n\n“You did,” Coach Davis agreed. “Hard work. How did you feel at the end of that game?”\n\nAngel shrugged. “Tired.”\n\n“You looked it. Did you see Jayson’s block on that last shot? That was a game-saver.”\n\nAngel mumbled, “Yeah, it was good.” He didn’t like where this was going.\n\nCoach Davis didn't lecture. He just leaned against the bleachers. “You know, there was this famous pro team, years ago. They had one player who was a superstar, could score from anywhere. But they didn’t win the championship until he learned to trust the other ten guys on the field. He realized he couldn’t carry the whole team on his own.” The coach gestured with his chin toward the prize table. “A trophy is a lot heavier when you try to lift it alone, Angel.”\n\nThe words hung in the air, heavier than any trophy. Angel walked back to the field, the coach’s story echoing in his mind.\n\nThe final match was against the Red Raptors, two fast and aggressive players who had bulldozed their way through the tournament. The game was a blur of frantic energy. The Raptors scored first. Angel, fueled by a mix of frustration and determination, answered with a blistering shot from the wing. The score was tied 1-1. The clock on the scoreboard ticked down: one minute left.\n\nThe ball came to Angel. He trapped it perfectly. The crowd noise faded to a dull roar in his ears. He saw a path, a narrow lane to the goal. It was a tough angle, a low-percentage shot, but he’d made harder ones before. *I can do this,* he thought. *I can win this.*\n\nThen, out of the corner of his eye, he saw a flash of his own team’s blue jersey. It was Jayson. He’d found an open space right in front of the net, his hands up slightly, his eyes wide with anticipation. The old Angel, the one from the start of the tournament, would have ignored him. He would have taken the glorious, difficult shot himself.\n\nBut as he looked at his brother, he saw the trust in Jayson’s face. He heard Coach Davis’s voice in his head: *A trophy is a lot heavier when you try to lift it alone.*\n\nIn a split-second, he made his choice.\n\nAngel faked the shot. The two defenders lunged toward him, completely falling for the bluff. In the space they created, Angel sent a crisp, perfect pass right to Jayson’s feet.\n\nJayson didn’t hesitate. He didn’t try to do anything fancy. He just planted his foot and took the shot. It wasn’t a rocket like Angel’s, but it was clean and precise. The ball sailed in a gentle arc, right over the diving goalie’s outstretched fingers, and settled into the back of the net.\n\nA fraction of a second later, the final buzzer shrieked across the park.\n\nThey had won.\n\nA swarm of friends and teammates mobbed Jayson, whooping and cheering. Angel hung back for a moment, a strange, warm feeling spreading through his chest. It wasn’t the fiery pride of scoring himself; it was something bigger, something better. Jayson broke free from the group and sprinted toward him, his face lit up with a grin that seemed to stretch from ear to ear.\n\n“We did it!” Jayson yelled, throwing his arms around his brother. “Angel, we did it!”\n\nNot *I* did it. *We* did it.\n\nAngel hugged him back, ruffling his sweaty hair. A real, genuine grin spread across his own face. “Yeah, Jayson,” he said, his voice thick with emotion. “We did.”\n\nWhen Coach Davis presented the trophy, he held it out for both of them. Angel instinctively stepped back. “You hold it first,” he told Jayson. “You scored the winning goal.”\n\nJayson’s eyes went wide, and he reverently took the heavy, golden cup. After a moment, he held it out to Angel. “Here, you help.”\n\nTogether, they lifted it high. Angel was surprised. In their shared hands, the trophy felt surprisingly light.\n\nWalking home, the late afternoon sun casting long shadows ahead of them, they passed the trophy back and forth. They weren't just replaying the final goal anymore.\n\n“Next time,” Jayson said, his mind already racing, “if you do that fake-shot move again, I can cut behind the defender and you can chip it over the top.”\n\n“Yeah, that could work,” Angel said, picturing the play. “And if they double-team me near the corner, you stay open near the middle. I’ll find you.”\n\nHe looked over at his brother, who was carefully polishing a smudge off the trophy’s base with his shirt. The golden prize was beautiful, but Angel realized it wasn't the trophy itself that mattered. It was the feeling of winning it with his brother by his side. He wasn't just a star player anymore. He was a big brother. And he was a teammate. And that felt better than any solo victory ever could."
+        }
+      }
+    ],
+    "Split Into Scenes": [
+      {
+        "json": {
+          "scene_number": 1,
+          "scene_title": "Opening",
+          "scene_text": "The summer sun beat down on the community park, making the freshly cut grass smell sweet and sharp. The air buzzed with the excited shouts of kids and the thud of soccer balls. Angel, twelve years old and with feet that moved like lightning, scanned the crowd. His eyes, however, weren't on the other players. They were fixed on the table near the concession stand where Coach Davis was standing. Next to the coach, winking in the sunlight, was the grand prize: a golden trophy so big and shiny it looked like it belonged to a professional league.",
+          "story_title": "The Secret of the Founder's Map",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ]
+        }
+      },
+      {
+        "json": {
+          "scene_number": 2,
+          "scene_title": "Inciting Incident",
+          "scene_text": "Coach Davis blew his whistle, a sharp tweet that cut through the noise. “Alright, listen up, Fireballs! This year, we’re doing something different for our end-of-summer event. It’s the first-ever Summer Soccer Sprint! A two-on-two tournament. The winning pair takes home the gold.”",
+          "story_title": "The Secret of the Founder's Map",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ]
+        }
+      },
+      {
+        "json": {
+          "scene_number": 3,
+          "scene_title": "Rising Action",
+          "scene_text": "A murmur of excitement rippled through the teams. Angel felt a jolt, a surge of pure ambition. He could already picture it: that gleaming trophy on the shelf in his room. He’d win it. He had to.",
+          "story_title": "The Secret of the Founder's Map",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ]
+        }
+      },
+      {
+        "json": {
+          "scene_number": 4,
+          "scene_title": "Climax",
+          "scene_text": "“I’ll post the team pairings now,” the coach continued, tacking a sheet of paper to the bulletin board.",
+          "story_title": "The Secret of the Founder's Map",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ]
+        }
+      },
+      {
+        "json": {
+          "scene_number": 5,
+          "scene_title": "Resolution",
+          "scene_text": "Angel’s ten-year-old brother, Jayson, bounced on the balls of his feet beside him. “I hope we get paired together! We’d be unstoppable!”",
+          "story_title": "The Secret of the Founder's Map",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ]
+        }
+      }
+    ],
+    "Generate Image": [
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "5009d73e-c869-4ba5-9e96-b14a17a2e04f",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 3
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 3
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 8
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "3ba850ec-bfc6-491c-a6df-c6f14795364a",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 7
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 5
+        }
+      }
+    ]
+  },
   "connections": {
     "Daily Story Generation": {
       "main": [
@@ -311,6 +624,17 @@
         ]
       ]
     },
+    "Idea Spark": {
+      "main": [
+        [
+          {
+            "node": "Parse Idea JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Parse Idea JSON": {
       "main": [
         [
@@ -322,11 +646,33 @@
         ]
       ]
     },
+    "Plot Architect": {
+      "main": [
+        [
+          {
+            "node": "Parse Plot JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Parse Plot JSON": {
       "main": [
         [
           {
             "node": "Narrative Weaver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrative Weaver": {
+      "main": [
+        [
+          {
+            "node": "Split Into Scenes",
             "type": "main",
             "index": 0
           }
@@ -348,7 +694,49 @@
       "main": [
         [
           {
+            "node": "Wait for Image Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Image Generation": {
+      "main": [
+        [
+          {
+            "node": "Poll Generation Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Poll Generation Status": {
+      "main": [
+        [
+          {
+            "node": "Check Generation Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Generation Status": {
+      "main": [
+        [
+          {
             "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ],
+      "error": [
+        [
+          {
+            "node": "Wait for Image Generation",
             "type": "main",
             "index": 0
           }
@@ -382,39 +770,6 @@
         [
           {
             "node": "Finalize Story",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Idea Spark": {
-      "main": [
-        [
-          {
-            "node": "Parse Idea JSON",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plot Architect": {
-      "main": [
-        [
-          {
-            "node": "Parse Plot JSON",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Narrative Weaver": {
-      "main": [
-        [
-          {
-            "node": "Split Into Scenes",
             "type": "main",
             "index": 0
           }
@@ -459,8 +814,9 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "98eb5f5e-6744-4747-989b-f46d45e95846",
+  "versionId": "e043c87f-e315-4c05-9f4e-6a4996bd9ec6",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "f20caa6f4c3b31e4e458fa492f7861e280816c740b326b85933fb4e979575bd3"
   },
   "id": "GmMQLcSCBGatM8t5",
