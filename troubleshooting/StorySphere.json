@@ -11,13 +11,13 @@
           ]
         }
       },
-      "id": "70dfe632-4108-457d-805e-13888783b9e8",
+      "id": "426f617a-e122-471d-9a24-14f4d7ef07a7",
       "name": "Daily Story Generation",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.1,
       "position": [
-        -2160,
-        0
+        -2368,
+        -152
       ]
     },
     {
@@ -29,13 +29,13 @@
         "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
         "columns": "desciption"
       },
-      "id": "e6ed55fc-1385-4da0-9f22-4a574bb293e3",
+      "id": "27b624b8-9067-4a4c-a601-a92db9f7564c",
       "name": "Create Story Document",
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1,
       "position": [
-        -1936,
-        0
+        -2144,
+        -152
       ],
       "credentials": {
         "googleApi": {
@@ -53,23 +53,23 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -1712,
-        0
+        -1920,
+        -152
       ],
-      "id": "7618648f-d7d2-4bbf-b4c7-72e50f09da93",
+      "id": "809e9b56-5183-446f-8ee9-465ec0477f7b",
       "name": "Idea Spark"
     },
     {
       "parameters": {
         "jsCode": "// Parse the JSON response from Idea Spark (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
       },
-      "id": "bab8ca4f-9306-451c-bf2c-5da0fce32a48",
+      "id": "eba8a98e-919a-4d19-8351-ff45b7fce2a5",
       "name": "Parse Idea JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1488,
-        0
+        -1568,
+        -152
       ]
     },
     {
@@ -81,23 +81,23 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -1264,
-        0
+        -1344,
+        -152
       ],
-      "id": "8bbcc2d3-a20f-442f-bc7a-c119603746c1",
+      "id": "d15c8437-5ce8-4369-aef7-57f9f05f43e1",
       "name": "Plot Architect"
     },
     {
       "parameters": {
         "jsCode": "// Parse the JSON response from Plot Architect (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
       },
-      "id": "9df7636d-29c5-4e71-aa71-f684624d4bb0",
+      "id": "706a5369-f92e-4a90-8124-8e226e002541",
       "name": "Parse Plot JSON",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1040,
-        0
+        -992,
+        -152
       ]
     },
     {
@@ -109,23 +109,47 @@
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 2.2,
       "position": [
-        -816,
-        0
+        -768,
+        -152
       ],
-      "id": "ed617eec-242d-4b24-9ac6-893a72554486",
+      "id": "6c9bb539-f250-4934-a570-c76ee19168b0",
       "name": "Narrative Weaver"
     },
     {
       "parameters": {
         "jsCode": "// Split the story into scenes for image generation\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (response.output) {\n  // LangChain agent response structure\n  storyText = response.output;\n} else if (response.text) {\n  // Direct text response\n  storyText = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  storyText = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  storyText = response;\n} else {\n  // Try to find text in the response\n  storyText = response.message || response.response || JSON.stringify(response);\n}\n\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
       },
-      "id": "1cf67278-2324-4487-a2ba-607c8c2e7877",
+      "id": "d5d1983e-d62a-4853-b8cf-ebbfd5e609be",
       "name": "Split Into Scenes",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -592,
-        0
+        -416,
+        -152
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate a compelling cover art prompt based on the story\nconst plotData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  storyText = narrativeResponse;\n} else {\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\n// Extract key elements from the story for cover art\nconst title = plotData.title || 'Story Title';\nconst genre = plotData.genre || 'Adventure';\nconst moral = plotData.moral_lesson_summary || 'A story about friendship';\nconst setting = plotData.setting || 'An exciting adventure';\n\n// Create a compelling cover art prompt\nconst coverPrompt = `Professional children's book cover art, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The cover should capture the essence of: ${title}. Genre: ${genre}. Setting: ${setting}. 
+
+COVER SPECIFICATIONS:
+- Standard children's book cover dimensions (8.5" x 11" or 3:4 aspect ratio)
+- Title "${title}" prominently displayed at the top in an elegant, readable font with subtle glow effect
+- Author name "StorySphere AI" at the bottom
+- Professional book cover layout with proper margins and spacing
+- High contrast, detailed, award-winning illustration quality
+- 4K resolution, cinematic composition
+- Perfect for printing and digital display
+- Visually stunning and immediately captures attention
+- Consistent with professional children's book publishing standards`;\n\nreturn {\n  json: {\n    coverPrompt: coverPrompt,\n    storyTitle: title,\n    storyText: storyText,\n    plotData: plotData,\n    genre: genre,\n    setting: setting,\n    moral: moral\n  }\n};"
+      },
+      "id": "generate-cover-prompt",
+      "name": "Generate Cover Art Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        -152
       ]
     },
     {
@@ -148,7 +172,7 @@
           "parameters": [
             {
               "name": "prompt",
-              "value": "Digital illustration, vibrant colors, storybook style, children's book illustration. Angel is a 12-year-old boy with curly black hair and a red hoodie, confident posture. Jayson is a 10-year-old boy with short brown hair, glasses, and a blue t-shirt, curious expression. {{ $json.scene_text }}"
+              "value": "={{ $json.coverPrompt }}"
             },
             {
               "name": "num_images",
@@ -162,13 +186,71 @@
         },
         "options": {}
       },
-      "id": "4e1f030f-6a7a-47b8-a112-72bca79d61fd",
-      "name": "Generate Image",
+      "id": "generate-cover-art",
+      "name": "Generate Cover Art",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
         -368,
-        0
+        -152
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Weeuuv18hA6Ijh41",
+          "name": "fal.ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://queue.fal.run/fal-ai/nano-banana",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "=Professional children's book illustration, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The scene shows: {{ $json.scene_text }}. 
+
+ILLUSTRATION SPECIFICATIONS:
+- Standard children's book page dimensions (8.5" x 11" or 3:4 aspect ratio)
+- Consistent with professional children's book publishing standards
+- High contrast, detailed, award-winning illustration quality
+- 4K resolution, cinematic composition
+- Perfect for printing and digital display
+- Full-page illustration that complements the story text
+- Engaging and age-appropriate for 10-12 year olds"
+            },
+            {
+              "name": "num_images",
+              "value": 1
+            },
+            {
+              "name": "output_format",
+              "value": "jpeg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "537501da-bfac-45ff-b23b-f35408c6f34d",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -192,
+        -152
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -182,14 +264,15 @@
         "amount": 15,
         "unit": "seconds"
       },
-      "id": "wait-for-generation",
+      "id": "638cf076-0bec-422e-a5ab-af2141b1ebca",
       "name": "Wait for Image Generation",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
-        -144,
-        0
-      ]
+        32,
+        -152
+      ],
+      "webhookId": "83b6d761-fa94-44a7-9c10-eac91676eea8"
     },
     {
       "parameters": {
@@ -198,13 +281,13 @@
         "genericAuthType": "httpHeaderAuth",
         "options": {}
       },
-      "id": "poll-status",
+      "id": "8ffa8c98-c3fc-41a8-a12c-283574c6bb32",
       "name": "Poll Generation Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        80,
-        0
+        256,
+        -224
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -217,13 +300,13 @@
       "parameters": {
         "jsCode": "// Check if image generation is complete and extract image URL\nconst response = $input.first().json;\n\nconsole.log('Full response:', JSON.stringify(response, null, 2));\nconsole.log('Response status:', response.status);\nconsole.log('Has images array:', !!response.images);\nconsole.log('Images length:', response.images?.length);\n\n// Check if we already have images (completed response)\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  console.log('Image found, extracting URL:', response.images[0].url);\n  return {\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      originalResponse: response\n    }\n  };\n}\n\n// If still in queue, throw error to trigger retry\nif (response.status === 'IN_QUEUE') {\n  const queuePos = response.metrics?.queue_position || 'unknown';\n  throw new Error(`Image still generating. Queue position: ${queuePos}. Retrying...`);\n}\n\n// If completed status but no images (fallback)\nif (response.status === 'COMPLETED') {\n  throw new Error('No images found in completed response');\n}\n\n// Handle failed status\nif (response.status === 'FAILED') {\n  throw new Error(`Image generation failed: ${response.error || 'Unknown error'}`);\n}\n\n// If no status but we have images, treat as completed\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  return {\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      originalResponse: response\n    }\n  };\n}\n\n// Handle other cases\nthrow new Error(`Unexpected response format. Status: ${response.status || 'undefined'}, Has images: ${!!response.images}`);"
       },
-      "id": "check-generation-status",
+      "id": "4d9a22df-9b83-4753-a504-6a850e1905b6",
       "name": "Check Generation Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        304,
-        0
+        480,
+        -152
       ]
     },
     {
@@ -239,13 +322,13 @@
           }
         }
       },
-      "id": "00576012-a37f-4d25-9300-fe25ec852dae",
+      "id": "bb0cc2d5-d98f-4127-bafd-0d9f3147715b",
       "name": "Download Image",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        304,
-        0
+        704,
+        -152
       ]
     },
     {
@@ -253,40 +336,69 @@
         "operation": "upload",
         "requestOptions": {}
       },
-      "id": "a86589c4-1df5-468f-ab92-6e7cc39cd5b1",
+      "id": "9ebece3d-4e98-44d9-925d-a84ffc5f9d0b",
       "name": "Upload to Firebase Storage",
       "type": "n8n-nodes-base.googleCloudStorage",
       "typeVersion": 1,
       "position": [
-        288,
-        0
+        928,
+        -152
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  // LangChain agent response structure\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  // Direct text response\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  // Anthropic-style response structure\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  // String response\n  storyText = narrativeResponse;\n} else {\n  // Try to find text in the response\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
+        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\nconst coverArtData = $('Generate Cover Art').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  // LangChain agent response structure\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  // Direct text response\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  // Anthropic-style response structure\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  // String response\n  storyText = narrativeResponse;\n} else {\n  // Try to find text in the response\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\n// Get cover art URL\nlet coverArtUrl = null;\nif (coverArtData.images && coverArtData.images.length > 0) {\n  coverArtUrl = coverArtData.images[0].url;\n}\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    coverArtUrl: coverArtUrl,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
       },
-      "id": "c9afb4d7-89c4-425b-b9ac-87a1004e5365",
+      "id": "d02f73d7-d51c-4ca8-b24e-382b8841cdc3",
       "name": "Aggregate Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        512,
-        0
+        1152,
+        -152
       ]
     },
     {
       "parameters": {
         "authentication": "serviceAccount",
-        "operation": "update"
+        "operation": "update",
+        "projectId": "storysprout-a1166",
+        "collection": "n8nStories",
+        "documentId": "={{ $('Create Story Document').first().json.id }}",
+        "fields": {
+          "studentName": "Angel",
+          "grade": 6,
+          "storyTitle": "={{ $json.storyTitle }}",
+          "storyBody": "={{ $json.storyText }}",
+          "vocabulary": [],
+          "imagePrompt": "Generated by StorySphere AI",
+          "quiz": {
+            "multipleChoice": [],
+            "openEnded": []
+          },
+          "recipientType": "student",
+          "recipientEmail": "angeld0427@icloud.com",
+          "subject": "={{ $json.storyTitle }} - Your Daily Adventure! 🚀",
+          "status": "pending_review",
+          "processedAt": "={{ $now }}",
+          "imageUrls": "={{ $json.imageUrls }}",
+          "coverArtUrl": "={{ $json.coverArtUrl }}",
+          "metadata": {
+            "n8nWorkflowId": "story-generation-workflow",
+            "n8nExecutionId": "={{ $execution.id }}",
+            "deliveryAttempts": 0,
+            "sceneCount": "={{ $json.sceneCount }}",
+            "plotData": "={{ $json.plotData }}"
+          }
+        }
       },
-      "id": "bff4c4c4-4599-4a08-84d2-dfeae38b19de",
+      "id": "6b96eef9-54bc-4698-8ed4-f86af2d634bf",
       "name": "Finalize Story",
       "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
       "typeVersion": 1,
       "position": [
-        736,
-        0
+        1376,
+        -152
       ],
       "credentials": {
         "googleApi": {
@@ -303,10 +415,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -1648,
-        224
+        -1848,
+        72
       ],
-      "id": "3343d82e-d75c-49d4-9f18-6b17398d0ab6",
+      "id": "7e541210-2c69-467c-be60-2d6459e8fb78",
       "name": "Google Gemini Chat Model",
       "credentials": {
         "googlePalmApi": {
@@ -323,10 +435,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -1216,
-        224
+        -1272,
+        72
       ],
-      "id": "69e0eb36-c77d-4809-9d63-b90ca393bb11",
+      "id": "6ec3511d-26ae-4d6b-9f09-7eb6a02fe5b7",
       "name": "Google Gemini Chat Model1",
       "credentials": {
         "googlePalmApi": {
@@ -343,10 +455,10 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -768,
-        224
+        -696,
+        72
       ],
-      "id": "6fa84b87-10c7-459c-8727-1b653fba07b0",
+      "id": "ebdf66a8-60da-4761-bbda-ff56ed758b4d",
       "name": "Google Gemini Chat Model2",
       "credentials": {
         "googlePalmApi": {
@@ -599,6 +711,175 @@
           "queue_position": 5
         }
       }
+    ],
+    "Wait for Image Generation": [
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "5009d73e-c869-4ba5-9e96-b14a17a2e04f",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 3
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 3
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 8
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "3ba850ec-bfc6-491c-a6df-c6f14795364a",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 7
+        }
+      },
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 5
+        }
+      }
+    ],
+    "Poll Generation Status": [
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": "Here's the illustration you requested: "
+        }
+      },
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/zebra/sQwgsf58yiKHu-GdXOlHr.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": ""
+        }
+      },
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/penguin/GRufhbBlLR7veKMvDYiTw.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": "Here's an illustration of Angel and Jayson for your story! "
+        }
+      },
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/panda/Jm2R8eyo6i6I7vS22gpuH.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": ""
+        }
+      },
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/rabbit/jZiu8Dg59PnSU-bhZAGS7.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": "Here's the illustration of Angel and Jayson for your storybook: "
+        }
+      }
+    ],
+    "Check Generation Status": [
+      {
+        "json": {
+          "imageUrl": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+          "requestId": "unknown",
+          "status": "COMPLETED",
+          "originalResponse": {
+            "images": [
+              {
+                "url": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+                "content_type": "image/jpeg",
+                "file_name": "output.jpeg",
+                "file_size": null
+              }
+            ],
+            "description": "Here's the illustration you requested: "
+          }
+        }
+      }
+    ],
+    "Download Image": [
+      {
+        "json": {
+          "imageUrl": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+          "requestId": "unknown",
+          "status": "COMPLETED",
+          "originalResponse": {
+            "images": [
+              {
+                "url": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+                "content_type": "image/jpeg",
+                "file_name": "output.jpeg",
+                "file_size": null
+              }
+            ],
+            "description": "Here's the illustration you requested: "
+          }
+        }
+      }
     ]
   },
   "connections": {
@@ -672,6 +953,28 @@
       "main": [
         [
           {
+            "node": "Generate Cover Art Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Cover Art Prompt": {
+      "main": [
+        [
+          {
+            "node": "Generate Cover Art",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Cover Art": {
+      "main": [
+        [
+          {
             "node": "Split Into Scenes",
             "type": "main",
             "index": 0
@@ -730,11 +1033,7 @@
             "node": "Download Image",
             "type": "main",
             "index": 0
-          }
-        ]
-      ],
-      "error": [
-        [
+          },
           {
             "node": "Wait for Image Generation",
             "type": "main",
