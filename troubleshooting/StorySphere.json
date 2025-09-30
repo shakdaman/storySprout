@@ -130,18 +130,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Generate a compelling cover art prompt based on the story\nconst plotData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  storyText = narrativeResponse;\n} else {\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\n// Extract key elements from the story for cover art\nconst title = plotData.title || 'Story Title';\nconst genre = plotData.genre || 'Adventure';\nconst moral = plotData.moral_lesson_summary || 'A story about friendship';\nconst setting = plotData.setting || 'An exciting adventure';\n\n// Create a compelling cover art prompt\nconst coverPrompt = `Professional children's book cover art, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The cover should capture the essence of: ${title}. Genre: ${genre}. Setting: ${setting}. 
-
-COVER SPECIFICATIONS:
-- Standard children's book cover dimensions (8.5" x 11" or 3:4 aspect ratio)
-- Title "${title}" prominently displayed at the top in an elegant, readable font with subtle glow effect
-- Author name "StorySphere AI" at the bottom
-- Professional book cover layout with proper margins and spacing
-- High contrast, detailed, award-winning illustration quality
-- 4K resolution, cinematic composition
-- Perfect for printing and digital display
-- Visually stunning and immediately captures attention
-- Consistent with professional children's book publishing standards`;\n\nreturn {\n  json: {\n    coverPrompt: coverPrompt,\n    storyTitle: title,\n    storyText: storyText,\n    plotData: plotData,\n    genre: genre,\n    setting: setting,\n    moral: moral\n  }\n};"
+        "jsCode": "// Generate a compelling cover art prompt based on the story\\nconst plotData = $('Parse Plot JSON').first().json;\\nconst narrativeResponse = $('Narrative Weaver').first().json;\\n\\n// Handle different response structures from Gemini agents\\nlet storyText;\\nif (narrativeResponse.output) {\\n  storyText = narrativeResponse.output;\\n} else if (narrativeResponse.text) {\\n  storyText = narrativeResponse.text;\\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\\n  storyText = narrativeResponse.content[0].text;\\n} else if (typeof narrativeResponse === 'string') {\\n  storyText = narrativeResponse;\\n} else {\\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\\n}\\n\\n// Extract key elements from the story for cover art\\nconst title = plotData.title || 'Story Title';\\nconst genre = plotData.genre || 'Adventure';\\nconst moral = plotData.moral_lesson_summary || 'A story about friendship';\\nconst setting = plotData.setting || 'An exciting adventure';\\n\\n// Create a compelling cover art prompt\\nconst coverPrompt = `Professional children's book cover art, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The cover should capture the essence of: ${title}. Genre: ${genre}. Setting: ${setting}. COVER SPECIFICATIONS: Standard children's book cover dimensions (8.5\" x 11\" or 3:4 aspect ratio), Title \"${title}\" prominently displayed at the top in an elegant, readable font with subtle glow effect, Author name \"StorySphere AI\" at the bottom, Professional book cover layout with proper margins and spacing, High contrast, detailed, award-winning illustration quality, 4K resolution, cinematic composition, Perfect for printing and digital display, Visually stunning and immediately captures attention, Consistent with professional children's book publishing standards`;\\n\\nreturn {\\n  json: {\\n    coverPrompt: coverPrompt,\\n    storyTitle: title,\\n    storyText: storyText,\\n    plotData: plotData,\\n    genre: genre,\\n    setting: setting,\\n    moral: moral\\n  }\\n};"
       },
       "id": "generate-cover-prompt",
       "name": "Generate Cover Art Prompt",
@@ -221,16 +210,7 @@ COVER SPECIFICATIONS:
           "parameters": [
             {
               "name": "prompt",
-              "value": "=Professional children's book illustration, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The scene shows: {{ $json.scene_text }}. 
-
-ILLUSTRATION SPECIFICATIONS:
-- Standard children's book page dimensions (8.5" x 11" or 3:4 aspect ratio)
-- Consistent with professional children's book publishing standards
-- High contrast, detailed, award-winning illustration quality
-- 4K resolution, cinematic composition
-- Perfect for printing and digital display
-- Full-page illustration that complements the story text
-- Engaging and age-appropriate for 10-12 year olds"
+              "value": "=Professional children's book illustration, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The scene shows: {{ $json.scene_text }}. ILLUSTRATION SPECIFICATIONS: Standard children's book page dimensions (8.5\" x 11\" or 3:4 aspect ratio), Consistent with professional children's book publishing standards, High contrast, detailed, award-winning illustration quality, 4K resolution, cinematic composition, Perfect for printing and digital display, Full-page illustration that complements the story text, Engaging and age-appropriate for 10-12 year olds"
             },
             {
               "name": "num_images",
