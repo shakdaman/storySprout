@@ -1,0 +1,71 @@
+{
+  "name": "StorySphere - Automated Story Generation Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour",
+              "value": 8
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily Story Generation",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "collection": "n8nStories",
+        "operation": "create",
+        "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
+        "fields": {
+          "status": "generating",
+          "createdAt": "={{ $now }}",
+          "metadata": {
+            "n8nWorkflowId": "story-generation-workflow",
+            "n8nExecutionId": "={{ $execution.id }}"
+          }
+        }
+      },
+      "id": "create-story-document",
+      "name": "Create Story Document",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [460, 300]
+    }
+  ],
+  "connections": {
+    "Daily Story Generation": {
+      "main": [
+        [
+          {
+            "node": "Create Story Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-12T22:00:00.000Z",
+      "updatedAt": "2025-01-12T22:00:00.000Z",
+      "id": "storysphere",
+      "name": "StorySphere"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-12T22:00:00.000Z",
+  "versionId": "1"
+}

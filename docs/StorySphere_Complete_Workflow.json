@@ -1,0 +1,485 @@
+{
+  "name": "StorySphere - Automated Story Generation Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour",
+              "value": 8
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Daily Story Generation",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "collection": "n8nStories",
+        "operation": "create",
+        "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
+        "fields": {
+          "status": "generating",
+          "createdAt": "={{ $now }}",
+          "metadata": {
+            "n8nWorkflowId": "story-generation-workflow",
+            "n8nExecutionId": "={{ $execution.id }}"
+          }
+        }
+      },
+      "id": "create-story-document",
+      "name": "Create Story Document",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-haiku-20240307"
+            },
+            {
+              "name": "max_tokens",
+              "value": 4096
+            },
+            {
+              "name": "messages",
+              "value": [
+                {
+                  "role": "user",
+                  "content": "You are an AI brainstormer specializing in generating creative and educational story ideas for children in the 5th and 6th grade (ages 10-12). Your goal is to produce a constant stream of unique and engaging concepts.\n\nCRITICAL INSTRUCTIONS:\n- Generate a single, compelling story idea\n- The main characters MUST be two brothers named Angel (6th grader) and Jayson (5th grader)\n- The story idea should be suitable for a short story of approximately 1200-1500 words\n- Generate a valuable, age-appropriate life lesson or moral that can be naturally integrated into the story\n- Examples of good morals include: perseverance, teamwork, honesty, empathy, problem-solving, courage, responsibility, kindness, creativity, or friendship\n- To ensure variety, please choose a genre from the following list for this story: Sci-Fi, Fantasy, Mystery, Adventure, Historical Fiction, Comedy\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nJSON OUTPUT STRUCTURE:\n{\n  \"prompt\": \"A one-sentence summary of the story idea. Example: 'Angel and Jayson discover a mysterious old compass that doesn't point north, leading them on an adventure to find a hidden waterfall in their local state park.'\",\n  \"moral\": \"A concise statement of the moral lesson. Example: 'The importance of trusting your instincts and working together to solve a puzzle.'\",\n  \"genre\": \"The selected genre from the list above\",\n  \"estimatedLength\": \"1200-1500 words\"\n}"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "idea-spark-agent",
+      "name": "Agent 0: Idea Spark",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Idea Spark\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message);\n}"
+      },
+      "id": "parse-idea-json",
+      "name": "Parse Idea JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-haiku-20240307"
+            },
+            {
+              "name": "max_tokens",
+              "value": 4096
+            },
+            {
+              "name": "messages",
+              "value": [
+                {
+                  "role": "user",
+                  "content": "You are a master storyteller and child development expert, tasked with creating a structured plot outline for a children's story. Your audience is 5th and 6th graders. The story must be engaging, thoughtful, and clearly embed a valuable life lesson.\n\nCRITICAL INSTRUCTIONS:\n- The main characters MUST be named Angel (a 6th grader) and Jayson (a 5th grader)\n- The tone should be adventurous and positive, suitable for ages 10-12\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nUSER STORY INPUT:\nCore Idea: {{ $json.prompt }}\nMoral to Teach: {{ $json.moral }}\nGenre: {{ $json.genre }}\n\nJSON OUTPUT STRUCTURE:\n{\n  \"title\": \"A creative and engaging title for the story, under 10 words\",\n  \"logline\": \"A one-sentence summary of the entire story\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A brief, one-sentence description of Angel's personality and role in this specific story\"\n    },\n    {\n      \"name\": \"Jayson\", \n      \"description\": \"A brief, one-sentence description of Jayson's personality and role in this specific story\"\n    }\n  ],\n  \"setting\": \"A vivid, one-paragraph description of the story's primary setting and atmosphere\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Brief description of how the story begins\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"The event that starts the main conflict\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"The main challenge or obstacle\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"The most exciting moment where the moral is tested\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"How the story ends and the moral is demonstrated\"\n    }\n  ],\n  \"moral_lesson_summary\": \"A brief, one-sentence explanation of how the plot's resolution teaches the specified moral\"\n}"
+                }
+              ]
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "plot-architect-agent",
+      "name": "Agent 1: Plot Architect",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Plot Architect\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message);\n}"
+      },
+      "id": "parse-plot-json",
+      "name": "Parse Plot JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "anthropicApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "claude-3-5-sonnet-20241022"
+            },
+            {
+              "name": "max_tokens",
+              "value": 4096
+            },
+            {
+              "name": "messages",
+              "value": [
+                {
+                  "role": "user",
+                  "content": "You are a world-class author of children's fiction, specializing in chapter books for 10-12 year olds. Your task is to write a complete story based on the provided plot outline.\n\nCRITICAL INSTRUCTIONS:\n- Adhere strictly to the provided plot outline\n- Do not deviate from the characters, setting, or scene descriptions\n- Write in a clear, engaging, and age-appropriate style\n- Use descriptive language and realistic dialogue\n- The total story length should be between 1200 and 1500 words\n- Ensure the moral of the story is demonstrated through the characters' actions and dialogue, especially during the climax and resolution\n- Do not add any titles, headings, or author notes\n- Write only the body of the story itself\n- Make sure Angel and Jayson feel like real brothers with distinct personalities\n- Include dialogue that sounds natural for their ages\n- Use vocabulary appropriate for 5th-6th grade readers\n- Create vivid descriptions that help readers visualize the scenes\n\nPLOT OUTLINE:\n{{ $json }}\n\nBegin writing the story now. Remember to show, don't tell, and let the moral lesson emerge naturally through the characters' journey."
+                }
+              ]
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "narrative-weaver-agent",
+      "name": "Agent 2: Narrative Weaver",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the story into scenes for image generation\nconst storyText = $input.first().json.content[0].text;\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
+      },
+      "id": "split-into-scenes",
+      "name": "Split Into Scenes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://queue.fal.run/fal-ai/nano-banana",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "falAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "Digital illustration, vibrant colors, storybook style, children's book illustration. Angel is a 12-year-old boy with curly black hair and a red hoodie, confident posture. Jayson is a 10-year-old boy with short brown hair, glasses, and a blue t-shirt, curious expression. {{ $json.scene_text }}"
+            },
+            {
+              "name": "num_images",
+              "value": 1
+            },
+            {
+              "name": "output_format",
+              "value": "jpeg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "generate-image",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 300]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.images[0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file",
+              "outputPropertyName": "imageData"
+            }
+          }
+        }
+      },
+      "id": "download-image",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2220, 300]
+    },
+    {
+      "parameters": {
+        "bucketName": "storysprout-a1166.appspot.com",
+        "operation": "upload",
+        "fileName": "stories/{{ $('Create Story Document').first().json.id }}/scene-{{ $('Split Into Scenes').item.json.scene_number }}.jpg",
+        "binaryPropertyName": "imageData",
+        "options": {}
+      },
+      "id": "upload-to-firebase",
+      "name": "Upload to Firebase Storage",
+      "type": "n8n-nodes-base.googleCloudStorage",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst storyText = $('Agent 2: Narrative Weaver').first().json.content[0].text;\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
+      },
+      "id": "aggregate-results",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "collection": "n8nStories",
+        "operation": "update",
+        "documentId": "={{ $('Create Story Document').first().json.id }}",
+        "fields": {
+          "studentName": "Angel",
+          "grade": 6,
+          "storyTitle": "={{ $json.storyTitle }}",
+          "storyBody": "={{ $json.storyText }}",
+          "vocabulary": [],
+          "imagePrompt": "Generated by StorySphere AI",
+          "quiz": {
+            "multipleChoice": [],
+            "openEnded": []
+          },
+          "recipientType": "student",
+          "recipientEmail": "angeld0427@icloud.com",
+          "subject": "={{ $json.storyTitle }} - Your Daily Adventure! 🚀",
+          "status": "pending_review",
+          "processedAt": "={{ $now }}",
+          "imageUrls": "={{ $json.imageUrls }}",
+          "metadata": {
+            "n8nWorkflowId": "story-generation-workflow",
+            "n8nExecutionId": "={{ $execution.id }}",
+            "deliveryAttempts": 0,
+            "sceneCount": "={{ $json.sceneCount }}",
+            "plotData": "={{ $json.plotData }}"
+          }
+        }
+      },
+      "id": "finalize-story",
+      "name": "Finalize Story",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [2880, 300]
+    }
+  ],
+  "connections": {
+    "Daily Story Generation": {
+      "main": [
+        [
+          {
+            "node": "Create Story Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Story Document": {
+      "main": [
+        [
+          {
+            "node": "Agent 0: Idea Spark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 0: Idea Spark": {
+      "main": [
+        [
+          {
+            "node": "Parse Idea JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Idea JSON": {
+      "main": [
+        [
+          {
+            "node": "Agent 1: Plot Architect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 1: Plot Architect": {
+      "main": [
+        [
+          {
+            "node": "Parse Plot JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Plot JSON": {
+      "main": [
+        [
+          {
+            "node": "Agent 2: Narrative Weaver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 2: Narrative Weaver": {
+      "main": [
+        [
+          {
+            "node": "Split Into Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Into Scenes": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Upload to Firebase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Firebase Storage": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Finalize Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    {
+      "createdAt": "2025-01-12T22:00:00.000Z",
+      "updatedAt": "2025-01-12T22:00:00.000Z",
+      "id": "storysphere",
+      "name": "StorySphere"
+    }
+  ],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-12T22:00:00.000Z",
+  "versionId": "1"
+}
