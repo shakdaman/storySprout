@@ -114,6 +114,7 @@
     },
     {
       "parameters": {
+        "method": "POST",
         "url": "https://queue.fal.run/fal-ai/nano-banana",
         "authentication": "predefinedCredentialType",
         "nodeCredentialType": "falAiApi",
