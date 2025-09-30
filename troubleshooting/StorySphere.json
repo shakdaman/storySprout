@@ -1,0 +1,475 @@
+{
+  "name": "StorySphere",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour"
+            }
+          ]
+        }
+      },
+      "id": "50ba67e5-4ecb-45f8-903b-6097fb3b9202",
+      "name": "Daily Story Generation",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "create",
+        "projectId": "storysprout-a1166",
+        "collection": "n8nStories",
+        "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
+        "columns": "productID"
+      },
+      "id": "afa2dde9-f960-4a06-9b40-7d5a0aaabd3c",
+      "name": "Create Story Document",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "r5aO2VLm91P11JaS",
+          "name": "Firestore"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Idea Spark\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message);\n}"
+      },
+      "id": "7188f2dd-5ee8-4f41-a30c-63334406bd23",
+      "name": "Parse Idea JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Plot Architect\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message);\n}"
+      },
+      "id": "044629c0-74ad-4e65-a180-9bc57b2090ce",
+      "name": "Parse Plot JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1376,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the story into scenes for image generation\nconst storyText = $input.first().json.content[0].text;\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
+      },
+      "id": "52f5318c-6a1a-49d1-babc-ec385806b457",
+      "name": "Split Into Scenes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1952,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://queue.fal.run/fal-ai/nano-banana",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "falAiApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "prompt",
+              "value": "Digital illustration, vibrant colors, storybook style, children's book illustration. Angel is a 12-year-old boy with curly black hair and a red hoodie, confident posture. Jayson is a 10-year-old boy with short brown hair, glasses, and a blue t-shirt, curious expression. {{ $json.scene_text }}"
+            },
+            {
+              "name": "num_images",
+              "value": 1
+            },
+            {
+              "name": "output_format",
+              "value": "jpeg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6598c7d3-acce-4106-b2d3-a6b67c9a2bdd",
+      "name": "Generate Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2176,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.images[0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file",
+              "outputPropertyName": "imageData"
+            }
+          }
+        }
+      },
+      "id": "759a3040-af62-4fd0-9c23-6e2cb19bcf3f",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upload",
+        "requestOptions": {}
+      },
+      "id": "9b4b6c16-a937-4f21-a281-a10673b4afa8",
+      "name": "Upload to Firebase Storage",
+      "type": "n8n-nodes-base.googleCloudStorage",
+      "typeVersion": 1,
+      "position": [
+        2624,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst storyText = $('Agent 2: Narrative Weaver').first().json.content[0].text;\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
+      },
+      "id": "86d5a04d-5487-4808-a6fd-12c3b1fc1bb6",
+      "name": "Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2848,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update"
+      },
+      "id": "7e707453-38e2-4791-a5de-ef6628ebeed5",
+      "name": "Finalize Story",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [
+        3072,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI brainstormer specializing in generating creative and educational story ideas for children in the 5th and 6th grade (ages 10-12). Your goal is to produce a constant stream of unique and engaging concepts.\n\nCRITICAL INSTRUCTIONS:\n- Generate a single, compelling story idea\n- The main characters MUST be two brothers named Angel (6th grader) and Jayson (5th grader)\n- The story idea should be suitable for a short story of approximately 1200-1500 words\n- Generate a valuable, age-appropriate life lesson or moral that can be naturally integrated into the story\n- Examples of good morals include: perseverance, teamwork, honesty, empathy, problem-solving, courage, responsibility, kindness, creativity, or friendship\n- To ensure variety, please choose a genre from the following list for this story: Sci-Fi, Fantasy, Mystery, Adventure, Historical Fiction, Comedy\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nJSON OUTPUT STRUCTURE:\n{\n  \"prompt\": \"A one-sentence summary of the story idea. Example: 'Angel and Jayson discover a mysterious old compass that doesn't point north, leading them on an adventure to find a hidden waterfall in their local state park.'\",\n  \"moral\": \"A concise statement of the moral lesson. Example: 'The importance of trusting your instincts and working together to solve a puzzle.'\",\n  \"genre\": \"The selected genre from the list above\",\n  \"estimatedLength\": \"1200-1500 words\"",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        448,
+        0
+      ],
+      "id": "e748eb80-8764-4448-bfb5-87ef453d360c",
+      "name": "Idea Spark"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1024,
+        0
+      ],
+      "id": "850528bc-4890-4d86-9394-b6609c16d7d9",
+      "name": "Plot Architect"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "a1dbb8f6-b3ff-4793-9f7a-5338b82552d6",
+      "name": "Narrative Weaver"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        520,
+        224
+      ],
+      "id": "4a84fad4-b15f-4013-b8bc-845de695ea66",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YQ4gkrIy96JprmDz",
+          "name": "shakdaman-Paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1096,
+        224
+      ],
+      "id": "783e2def-9559-4092-beb2-d1f4560be296",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YQ4gkrIy96JprmDz",
+          "name": "shakdaman-Paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1672,
+        224
+      ],
+      "id": "99e26ef3-da49-4834-8e4b-7e583328c6d0",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YQ4gkrIy96JprmDz",
+          "name": "shakdaman-Paid"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Daily Story Generation": {
+      "main": [
+        [
+          {
+            "node": "Create Story Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Story Document": {
+      "main": [
+        [
+          {
+            "node": "Idea Spark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Idea JSON": {
+      "main": [
+        [
+          {
+            "node": "Plot Architect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Plot JSON": {
+      "main": [
+        [
+          {
+            "node": "Narrative Weaver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Into Scenes": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Upload to Firebase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Firebase Storage": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Finalize Story",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idea Spark": {
+      "main": [
+        [
+          {
+            "node": "Parse Idea JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plot Architect": {
+      "main": [
+        [
+          {
+            "node": "Parse Plot JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrative Weaver": {
+      "main": [
+        [
+          {
+            "node": "Split Into Scenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Idea Spark",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Plot Architect",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Narrative Weaver",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "98eb5f5e-6744-4747-989b-f46d45e95846",
+  "meta": {
+    "instanceId": "f20caa6f4c3b31e4e458fa492f7861e280816c740b326b85933fb4e979575bd3"
+  },
+  "id": "GmMQLcSCBGatM8t5",
+  "tags": [
+    {
+      "name": "StorySphere",
+      "id": "f4t5CDRajdjLZoI5",
+      "createdAt": "2025-09-30T20:44:22.843Z",
+      "updatedAt": "2025-09-30T20:44:22.843Z"
+    }
+  ]
+}
