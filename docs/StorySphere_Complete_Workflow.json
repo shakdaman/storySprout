@@ -88,7 +88,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the JSON response from Idea Spark\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message);\n}"
+        "jsCode": "// Parse the JSON response from Idea Spark\nconst response = $input.first().json;\n\n// Handle different response structures\nlet content;\nif (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic API response structure\n  content = response.content[0].text;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message + '\\nContent: ' + content);\n}"
       },
       "id": "parse-idea-json",
       "name": "Parse Idea JSON",
@@ -146,7 +146,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse the JSON response from Plot Architect\nconst response = $input.first().json;\nconst content = response.content[0].text;\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message);\n}"
+        "jsCode": "// Parse the JSON response from Plot Architect\nconst response = $input.first().json;\n\n// Handle different response structures\nlet content;\nif (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic API response structure\n  content = response.content[0].text;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message + '\\nContent: ' + content);\n}"
       },
       "id": "parse-plot-json",
       "name": "Parse Plot JSON",
@@ -204,7 +204,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Split the story into scenes for image generation\nconst storyText = $input.first().json.content[0].text;\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
+        "jsCode": "// Split the story into scenes for image generation\nconst response = $input.first().json;\n\n// Handle different response structures for story text\nlet storyText;\nif (response.content && response.content[0] && response.content[0].text) {\n  storyText = response.content[0].text;\n} else if (response.text) {\n  storyText = response.text;\n} else if (typeof response === 'string') {\n  storyText = response;\n} else {\n  storyText = response.message || response.response || JSON.stringify(response);\n}\n\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
       },
       "id": "split-into-scenes",
       "name": "Split Into Scenes",
@@ -286,7 +286,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst storyText = $('Agent 2: Narrative Weaver').first().json.content[0].text;\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
+        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Agent 2: Narrative Weaver').first().json;\n\n// Handle different response structures for story text\nlet storyText;\nif (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  storyText = narrativeResponse.content[0].text;\n} else if (narrativeResponse.text) {\n  storyText = narrativeResponse.text;\n} else if (typeof narrativeResponse === 'string') {\n  storyText = narrativeResponse;\n} else {\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
       },
       "id": "aggregate-results",
       "name": "Aggregate Results",
