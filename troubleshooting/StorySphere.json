@@ -3,142 +3,15 @@
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "hour"
-            }
-          ]
-        }
+        "jsCode": "// Generate a compelling cover art prompt based on the story\nconst plotData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  storyText = narrativeResponse;\n} else {\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\n// Extract key elements from the story for cover art\nconst title = plotData.title || 'Story Title';\nconst genre = plotData.genre || 'Adventure';\nconst moral = plotData.moral_lesson_summary || 'A story about friendship';\nconst setting = plotData.setting || 'An exciting adventure';\nconst logline = plotData.logline || 'An exciting story about two brothers';\n\n// Create a compelling cover art prompt - NOW TRULY DYNAMIC!\nconst coverPrompt = `Professional children's book cover art, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. \n\nCHARACTER DESCRIPTIONS:\nAngel is a light-skinned Latino, confident 12-year-old boy with black box braids who likes to wear basketball jerseys and hoodies of various colors. \nJayson is a slightly lighter-skinned Latino, curious 10-year-old boy with cornrow braids who likes to wear baseball jerseys or sweatsuits.\n\nSTORY CONTEXT:\nTitle: \"${title}\"\nGenre: ${genre}\nSetting: ${setting}\nStory Summary: ${logline}\n\nThe cover should visually capture the essence of this ${genre} story set in ${setting}. The mood and composition should reflect the theme: ${moral}\n\nCOVER SPECIFICATIONS: \n- Standard children's book cover dimensions (8.5\" x 11\" or 3:4 aspect ratio)\n- The title \"${title}\" MUST be prominently displayed at the top in an elegant, readable font with subtle glow effect\n- Author name \"Shak & Jenn AI\" must be printed at the bottom\n- Professional book cover layout with proper margins and spacing\n- High contrast, detailed, award-winning illustration quality\n- 4K resolution, cinematic composition\n- Perfect for printing and digital display\n- Visually stunning and immediately captures attention\n- Consistent with professional children's book publishing standards`;\n\nreturn [{\n  json: {\n    coverPrompt: coverPrompt,\n    storyTitle: title,\n    storyText: storyText,\n    plotData: plotData,\n    genre: genre,\n    setting: setting,\n    moral: moral\n  }\n}];"
       },
-      "id": "426f617a-e122-471d-9a24-14f4d7ef07a7",
-      "name": "Daily Story Generation",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.1,
-      "position": [
-        -2368,
-        -152
-      ]
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "create",
-        "projectId": "storysprout-a1166",
-        "collection": "n8nStories",
-        "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
-        "columns": "desciption"
-      },
-      "id": "27b624b8-9067-4a4c-a601-a92db9f7564c",
-      "name": "Create Story Document",
-      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
-      "typeVersion": 1,
-      "position": [
-        -2144,
-        -152
-      ],
-      "credentials": {
-        "googleApi": {
-          "id": "r5aO2VLm91P11JaS",
-          "name": "Firestore"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "You are an AI brainstormer specializing in generating creative and educational story ideas for children in the 5th and 6th grade (ages 10-12). Your goal is to produce a constant stream of unique and engaging concepts.\n\nCRITICAL INSTRUCTIONS:\n- Generate a single, compelling story idea\n- The main characters MUST be two brothers named Angel (6th grader) and Jayson (5th grader)\n- The story idea should be suitable for a short story of approximately 1200-1500 words\n- Generate a valuable, age-appropriate life lesson or moral that can be naturally integrated into the story\n- Examples of good morals include: perseverance, teamwork, honesty, empathy, problem-solving, courage, responsibility, kindness, creativity, or friendship\n- To ensure variety, please choose a genre from the following list for this story: Sci-Fi, Fantasy, Mystery, Adventure, Historical Fiction, Comedy\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nJSON OUTPUT STRUCTURE:\n{\n  \"prompt\": \"A one-sentence summary of the story idea. Example: 'Angel and Jayson discover a mysterious old compass that doesn't point north, leading them on an adventure to find a hidden waterfall in their local state park.'\",\n  \"moral\": \"A concise statement of the moral lesson. Example: 'The importance of trusting your instincts and working together to solve a puzzle.'\",\n  \"genre\": \"The selected genre from the list above\",\n  \"estimatedLength\": \"1200-1500 words\"\n}",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
-      "position": [
-        -1920,
-        -152
-      ],
-      "id": "809e9b56-5183-446f-8ee9-465ec0477f7b",
-      "name": "Idea Spark"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse the JSON response from Idea Spark (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
-      },
-      "id": "eba8a98e-919a-4d19-8351-ff45b7fce2a5",
-      "name": "Parse Idea JSON",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1568,
-        -152
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=You are a master storyteller and child development expert, tasked with creating a structured plot outline for a children's story. Your audience is 5th and 6th graders. The story must be engaging, thoughtful, and clearly embed a valuable life lesson.\n\nCRITICAL INSTRUCTIONS:\n- The main characters MUST be named Angel (a 6th grader) and Jayson (a 5th grader)\n- The tone should be adventurous and positive, suitable for ages 10-12\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nUSER STORY INPUT:\nCore Idea: {{ $json.prompt }}\nMoral to Teach: {{ $json.moral }}\nGenre: {{ $json.genre }}\n\nJSON OUTPUT STRUCTURE:\n{\n  \"title\": \"A creative and engaging title for the story, under 10 words\",\n  \"logline\": \"A one-sentence summary of the entire story\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A brief, one-sentence description of Angel's personality and role in this specific story\"\n    },\n    {\n      \"name\": \"Jayson\", \n      \"description\": \"A brief, one-sentence description of Jayson's personality and role in this specific story\"\n    }\n  ],\n  \"setting\": \"A vivid, one-paragraph description of the story's primary setting and atmosphere\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Brief description of how the story begins\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"The event that starts the main conflict\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"The main challenge or obstacle\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"The most exciting moment where the moral is tested\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"How the story ends and the moral is demonstrated\"\n    }\n  ],\n  \"moral_lesson_summary\": \"A brief, one-sentence explanation of how the plot's resolution teaches the specified moral\"\n}",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
-      "position": [
-        -1344,
-        -152
-      ],
-      "id": "d15c8437-5ce8-4369-aef7-57f9f05f43e1",
-      "name": "Plot Architect"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Parse the JSON response from Plot Architect (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
-      },
-      "id": "706a5369-f92e-4a90-8124-8e226e002541",
-      "name": "Parse Plot JSON",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -992,
-        -152
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "=You are a world-class author of children's fiction, specializing in chapter books for 10-12 year olds. Your task is to write a complete story based on the provided plot outline.\n\nCRITICAL INSTRUCTIONS:\n- Adhere strictly to the provided plot outline\n- Do not deviate from the characters, setting, or scene descriptions\n- Write in a clear, engaging, and age-appropriate style\n- Use descriptive language and realistic dialogue\n- The total story length should be between 1200 and 1500 words\n- Ensure the moral of the story is demonstrated through the characters' actions and dialogue, especially during the climax and resolution\n- Do not add any titles, headings, or author notes\n- Write only the body of the story itself\n- Make sure Angel and Jayson feel like real brothers with distinct personalities\n- Include dialogue that sounds natural for their ages\n- Use vocabulary appropriate for 5th-6th grade readers\n- Create vivid descriptions that help readers visualize the scenes\n\nPLOT OUTLINE:\n{{ $json }}\n\nBegin writing the story now. Remember to show, don't tell, and let the moral lesson emerge naturally through the characters' journey.",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 2.2,
-      "position": [
-        -768,
-        -152
-      ],
-      "id": "6c9bb539-f250-4934-a570-c76ee19168b0",
-      "name": "Narrative Weaver"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Split the story into scenes for image generation\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (response.output) {\n  // LangChain agent response structure\n  storyText = response.output;\n} else if (response.text) {\n  // Direct text response\n  storyText = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  storyText = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  storyText = response;\n} else {\n  // Try to find text in the response\n  storyText = response.message || response.response || JSON.stringify(response);\n}\n\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
-      },
-      "id": "d5d1983e-d62a-4853-b8cf-ebbfd5e609be",
-      "name": "Split Into Scenes",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -416,
-        -152
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Generate a compelling cover art prompt based on the story\\nconst plotData = $('Parse Plot JSON').first().json;\\nconst narrativeResponse = $('Narrative Weaver').first().json;\\n\\n// Handle different response structures from Gemini agents\\nlet storyText;\\nif (narrativeResponse.output) {\\n  storyText = narrativeResponse.output;\\n} else if (narrativeResponse.text) {\\n  storyText = narrativeResponse.text;\\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\\n  storyText = narrativeResponse.content[0].text;\\n} else if (typeof narrativeResponse === 'string') {\\n  storyText = narrativeResponse;\\n} else {\\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\\n}\\n\\n// Extract key elements from the story for cover art\\nconst title = plotData.title || 'Story Title';\\nconst genre = plotData.genre || 'Adventure';\\nconst moral = plotData.moral_lesson_summary || 'A story about friendship';\\nconst setting = plotData.setting || 'An exciting adventure';\\n\\n// Create a compelling cover art prompt\\nconst coverPrompt = `Professional children's book cover art, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The cover should capture the essence of: ${title}. Genre: ${genre}. Setting: ${setting}. COVER SPECIFICATIONS: Standard children's book cover dimensions (8.5\" x 11\" or 3:4 aspect ratio), Title \"${title}\" prominently displayed at the top in an elegant, readable font with subtle glow effect, Author name \"StorySphere AI\" at the bottom, Professional book cover layout with proper margins and spacing, High contrast, detailed, award-winning illustration quality, 4K resolution, cinematic composition, Perfect for printing and digital display, Visually stunning and immediately captures attention, Consistent with professional children's book publishing standards`;\\n\\nreturn {\\n  json: {\\n    coverPrompt: coverPrompt,\\n    storyTitle: title,\\n    storyText: storyText,\\n    plotData: plotData,\\n    genre: genre,\\n    setting: setting,\\n    moral: moral\\n  }\\n};"
-      },
-      "id": "generate-cover-prompt",
+      "id": "b6181189-ee0d-4ae5-be35-c09228d71c30",
       "name": "Generate Cover Art Prompt",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -544,
-        -152
+        -976,
+        -96
       ]
     },
     {
@@ -175,13 +48,13 @@
         },
         "options": {}
       },
-      "id": "generate-cover-art",
+      "id": "6d308956-25fa-4213-b607-113f2acde46e",
       "name": "Generate Cover Art",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -368,
-        -152
+        -752,
+        -96
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -189,6 +62,304 @@
           "name": "fal.ai"
         }
       }
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "id": "a9c68a3c-c038-4fe0-a7aa-4fb21ad77035",
+      "name": "Wait for Image Generation",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -96
+      ],
+      "webhookId": "83b6d761-fa94-44a7-9c10-eac91676eea8"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.response_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "631f6a73-0dd4-4de0-93eb-0540744694b0",
+      "name": "Poll Generation Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        160,
+        -176
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "Weeuuv18hA6Ijh41",
+          "name": "fal.ai"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if image generation is complete and extract image URL\nconst response = $input.first().json;\n\nconsole.log('Full response:', JSON.stringify(response, null, 2));\nconsole.log('Response status:', response.status);\nconsole.log('Has images array:', !!response.images);\nconsole.log('Images length:', response.images?.length);\n\n// Check if we already have images (completed response)\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  console.log('Image found, extracting URL:', response.images[0].url);\n  return [{\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      originalResponse: response\n    }\n  }];\n}\n\n// If still in queue, throw error to trigger retry\nif (response.status === 'IN_QUEUE') {\n  const queuePos = response.metrics?.queue_position || 'unknown';\n  throw new Error(`Image still generating. Queue position: ${queuePos}. Retrying...`);\n}\n\n// If completed status but no images (fallback)\nif (response.status === 'COMPLETED') {\n  throw new Error('No images found in completed response');\n}\n\n// Handle failed status\nif (response.status === 'FAILED') {\n  throw new Error(`Image generation failed: ${response.error || 'Unknown error'}`);\n}\n\n// If no status but we have images, treat as completed\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  return [{\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      originalResponse: response\n    }\n  }];\n}\n\n// Handle other cases\nthrow new Error(`Unexpected response format. Status: ${response.status || 'undefined'}, Has images: ${!!response.images}`);"
+      },
+      "id": "e718d091-6897-4820-aaa6-399003a67dfa",
+      "name": "Check Generation Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        384,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hour"
+            }
+          ]
+        }
+      },
+      "id": "6778e849-416b-4bf2-ad75-5f54690e3c7f",
+      "name": "Daily Story Generation1",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -2928,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "create",
+        "projectId": "storysprout-a1166",
+        "collection": "n8nStories",
+        "documentId": "={{ $now.format('yyyy-MM-dd-HHmmss') }}-story",
+        "columns": "desciption"
+      },
+      "id": "fa7ac9c5-060a-4ea8-b368-37b95a1dd7e0",
+      "name": "Create Story Document1",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [
+        -2704,
+        -96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "r5aO2VLm91P11JaS",
+          "name": "Firestore"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://firebasestorage.googleapis.com/v0/b/storysprout-a1166.firebasestorage.app/o",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "=scene_images/{{ $now.toFormat('yyyy-MM-dd-HHmmss') }}_{{ $json.requestId }}.jpg"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "specifyBody": "binaryData",
+        "bodyBinaryPropertyName": "imageData",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "image/jpeg"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "231744f8-5a54-410b-8e92-80cf1818762c",
+      "name": "Upload to Firebase Storage1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        832,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate downloaded images and quiz data (robust to missing branches)\nconst allInputs = $input.all();\n\nfunction safeFirstJson(nodeName, fallback = null) {\n  try {\n    const node = $(nodeName);\n    const first = node.first();\n    return first && first.json ? first.json : fallback;\n  } catch (e) {\n    return fallback;\n  }\n}\n\nconst storyData = safeFirstJson('Parse Plot JSON', {});\nconst narrativeResponse = safeFirstJson('Narrative Weaver', {});\nconst quizDataRaw = safeFirstJson('Parse Quiz JSON', null);\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse && narrativeResponse.output) {\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse && narrativeResponse.text) {\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse && narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  storyText = narrativeResponse;\n} else {\n  storyText = (narrativeResponse && (narrativeResponse.message || narrativeResponse.response)) || JSON.stringify(narrativeResponse || {});\n}\n\n// Separate cover art from scene images using imageType\nlet coverArtUrl = null;\nconst sceneImageUrls = [];\n\nfor (const input of allInputs) {\n  const imageData = input.json || {};\n  if (imageData.imageUrl) {\n    if (imageData.imageType === 'cover') {\n      coverArtUrl = imageData.imageUrl;\n    } else {\n      sceneImageUrls.push(imageData.imageUrl);\n    }\n  }\n}\n\nreturn [{\n  json: {\n    storyTitle: storyData?.title || 'Untitled Story',\n    storyBody: storyText || '',\n    coverArtUrl: coverArtUrl,\n    imageUrls: JSON.stringify(sceneImageUrls),\n    quiz: JSON.stringify(quizDataRaw ?? {}),\n    plotData: JSON.stringify(storyData ?? {}),\n    status: 'completed',\n    processedAt: new Date().toISOString(),\n    sceneCount: sceneImageUrls.length\n  }\n}];"
+      },
+      "id": "4bdee73a-77ea-4899-8ff3-2f91f71074dc",
+      "name": "Aggregate Results1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "serviceAccount",
+        "operation": "upsert",
+        "projectId": "storysprout-a1166",
+        "collection": "n8nStories",
+        "documentId": "={{ $('Create Story Document1').first().json._id }}",
+        "columns": "storyTitle,storyBody,coverArtUrl,imageUrls,quiz,plotData,status,processedAt,sceneCount"
+      },
+      "id": "5cc5d97b-1353-4e78-85af-6a77626f98fd",
+      "name": "Finalize Story1",
+      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
+      "typeVersion": 1,
+      "position": [
+        1488,
+        -96
+      ],
+      "credentials": {
+        "googleApi": {
+          "id": "r5aO2VLm91P11JaS",
+          "name": "Firestore"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -2416,
+        144
+      ],
+      "id": "d97787ed-3186-4480-b0eb-1eaac7cdd436",
+      "name": "Google Gemini Chat Model3",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YQ4gkrIy96JprmDz",
+          "name": "shakdaman-Paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1840,
+        144
+      ],
+      "id": "ea65f482-a4dd-4e4c-815d-be6d9f3ad133",
+      "name": "Google Gemini Chat Model4",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YQ4gkrIy96JprmDz",
+          "name": "shakdaman-Paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -1264,
+        144
+      ],
+      "id": "9cfdbca0-63b1-47cd-ac7c-faded11f88e9",
+      "name": "Google Gemini Chat Model5",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YQ4gkrIy96JprmDz",
+          "name": "shakdaman-Paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Plot Architect (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Plot Architect: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
+      },
+      "id": "098c0b5a-3aa7-49d8-af9d-f5ce653d26d9",
+      "name": "Parse Plot JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1552,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a world-class author of children's fiction, specializing in chapter books for 10-12 year olds. Your task is to write a complete story based on the provided plot outline.\n\nCRITICAL INSTRUCTIONS:\n- Adhere strictly to the provided plot outline\n- Do not deviate from the characters, setting, or scene descriptions\n- Write in a clear, engaging, and age-appropriate style\n- Use descriptive language and realistic dialogue\n- The total story length should be between 1200 and 1500 words\n- Ensure the moral of the story is demonstrated through the characters' actions and dialogue, especially during the climax and resolution\n- Do not add any titles, headings, or author notes\n- Write only the body of the story itself\n- Make sure Angel and Jayson feel like real brothers with distinct personalities\n- Include dialogue that sounds natural for their ages\n- Use vocabulary appropriate for 5th-6th grade readers\n- Create vivid descriptions that help readers visualize the scenes\n\nPLOT OUTLINE:\n{{ $json }}\n\nBegin writing the story now. Remember to show, don't tell, and let the moral lesson emerge naturally through the characters' journey.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1328,
+        -96
+      ],
+      "id": "8e4d1ea9-6c35-4827-9a7b-ac12b69f1f9b",
+      "name": "Narrative Weaver"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a master storyteller and child development expert, tasked with creating a structured plot outline for a children's story. Your audience is 5th and 6th graders. The story must be engaging, thoughtful, and clearly embed a valuable life lesson.\n\nCRITICAL INSTRUCTIONS:\n- The main characters MUST be named Angel (a 6th grader) and Jayson (a 5th grader)\n- The tone should be adventurous and positive, suitable for ages 10-12\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nUSER STORY INPUT:\nCore Idea: {{ $json.prompt }}\nMoral to Teach: {{ $json.moral }}\nGenre: {{ $json.genre }}\n\nJSON OUTPUT STRUCTURE:\n{\n  \"title\": \"A creative and engaging title for the story, under 10 words\",\n  \"logline\": \"A one-sentence summary of the entire story\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A brief, one-sentence description of Angel's personality and role in this specific story\"\n    },\n    {\n      \"name\": \"Jayson\", \n      \"description\": \"A brief, one-sentence description of Jayson's personality and role in this specific story\"\n    }\n  ],\n  \"setting\": \"A vivid, one-paragraph description of the story's primary setting and atmosphere\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Brief description of how the story begins\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"The event that starts the main conflict\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"The main challenge or obstacle\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"The most exciting moment where the moral is tested\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"How the story ends and the moral is demonstrated\"\n    }\n  ],\n  \"moral_lesson_summary\": \"A brief, one-sentence explanation of how the plot's resolution teaches the specified moral\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -1904,
+        -96
+      ],
+      "id": "3a5d085c-1ec7-426f-9b0a-24e685fa44cd",
+      "name": "Plot Architect"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are an AI brainstormer specializing in generating creative and educational story ideas for children in the 5th and 6th grade (ages 10-12). Your goal is to produce a constant stream of unique and engaging concepts.\n\nCRITICAL INSTRUCTIONS:\n- Generate a single, compelling story idea\n- The main characters MUST be two brothers named Angel (6th grader) and Jayson (5th grader)\n- The story idea should be suitable for a short story of approximately 1200-1500 words\n- Generate a valuable, age-appropriate life lesson or moral that can be naturally integrated into the story\n- Examples of good morals include: perseverance, teamwork, honesty, empathy, problem-solving, courage, responsibility, kindness, creativity, or friendship\n- To ensure variety, please choose a genre from the following list for this story: Sci-Fi, Fantasy, Mystery, Adventure, Historical Fiction, Comedy\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nJSON OUTPUT STRUCTURE:\n{\n  \"prompt\": \"A one-sentence summary of the story idea. Example: 'Angel and Jayson discover a mysterious old compass that doesn't point north, leading them on an adventure to find a hidden waterfall in their local state park.'\",\n  \"moral\": \"A concise statement of the moral lesson. Example: 'The importance of trusting your instincts and working together to solve a puzzle.'\",\n  \"genre\": \"The selected genre from the list above\",\n  \"estimatedLength\": \"1200-1500 words\"\n}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        -2480,
+        -96
+      ],
+      "id": "5ff42c00-b132-402c-954e-50c4074a0696",
+      "name": "Idea Spark"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Idea Spark (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  // LangChain agent response structure\n  content = response.output;\n} else if (response.text) {\n  // Direct text response\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  content = response;\n} else {\n  // Try to find text in the response\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return {\n    json: parsedContent\n  };\n} catch (error) {\n  throw new Error('Failed to parse JSON from Idea Spark: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
+      },
+      "id": "569de8ba-7a5b-4b6b-9869-c5fdb4e667c2",
+      "name": "Parse Idea JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2128,
+        -96
+      ]
     },
     {
       "parameters": {
@@ -210,7 +381,7 @@
           "parameters": [
             {
               "name": "prompt",
-              "value": "=Professional children's book illustration, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. Angel is a confident 12-year-old boy with curly black hair wearing a red hoodie. Jayson is a curious 10-year-old boy with cornrow braids wearing a blue t-shirt. The scene shows: {{ $json.scene_text }}. ILLUSTRATION SPECIFICATIONS: Standard children's book page dimensions (8.5\" x 11\" or 3:4 aspect ratio), Consistent with professional children's book publishing standards, High contrast, detailed, award-winning illustration quality, 4K resolution, cinematic composition, Perfect for printing and digital display, Full-page illustration that complements the story text, Engaging and age-appropriate for 10-12 year olds"
+              "value": "=Professional children's book illustration, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting.\n\nCHARACTER DESCRIPTIONS:\nAngel is a light-skinned Latino, confident 12-year-old boy with black box braids who likes to wear basketball jerseys and hoodies of various colors.\nJayson is a slightly lighter-skinned Latino, curious 10-year-old boy with cornrow braids who likes to wear baseball jerseys or sweatsuits.\n\nSCENE TO ILLUSTRATE:\n{{ $json.scene_text }}\n\nScene Title: {{ $json.scene_title }}\nStory: {{ $json.story_title }}\n\nILLUSTRATION SPECIFICATIONS:\n- Standard children's book page dimensions (8.5\" x 11\" or 3:4 aspect ratio)\n- Consistent with professional children's book publishing standards\n- High contrast, detailed, award-winning illustration quality\n- 4K resolution, cinematic composition\n- Perfect for printing and digital display\n- Full-page illustration that complements the story text\n- Engaging and age-appropriate for 10-12 year olds"
             },
             {
               "name": "num_images",
@@ -224,13 +395,13 @@
         },
         "options": {}
       },
-      "id": "537501da-bfac-45ff-b23b-f35408c6f34d",
+      "id": "2e7a3f02-22f4-4233-a7a5-9da7d57f85bf",
       "name": "Generate Image",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -192,
-        -152
+        -304,
+        -96
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -241,18 +412,53 @@
     },
     {
       "parameters": {
-        "amount": 15,
+        "url": "={{ $json.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file",
+              "outputPropertyName": "imageData"
+            }
+          }
+        }
+      },
+      "id": "3f61bef9-2352-485f-b621-7d6111ebb442",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Split the story into scenes for image generation\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (response.output) {\n  // LangChain agent response structure\n  storyText = response.output;\n} else if (response.text) {\n  // Direct text response\n  storyText = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  // Anthropic-style response structure\n  storyText = response.content[0].text;\n} else if (typeof response === 'string') {\n  // String response\n  storyText = response;\n} else {\n  // Try to find text in the response\n  storyText = response.message || response.response || JSON.stringify(response);\n}\n\nconst plotData = $('Parse Plot JSON').first().json;\n\n// Split story into paragraphs\nconst paragraphs = storyText.split('\\n\\n').filter(p => p.trim().length > 0);\n\n// Create scenes based on plot points\nconst scenes = [];\nconst plotPoints = plotData.plot_points || [];\n\nfor (let i = 0; i < Math.min(paragraphs.length, plotPoints.length); i++) {\n  scenes.push({\n    scene_number: i + 1,\n    scene_title: plotPoints[i]?.title || `Scene ${i + 1}`,\n    scene_text: paragraphs[i].trim(),\n    story_title: plotData.title,\n    characters: plotData.characters\n  });\n}\n\nreturn scenes.map(scene => ({ json: scene }));"
+      },
+      "id": "c48c3333-9154-4233-ab29-266fe1db2e2e",
+      "name": "Split Into Scenes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 30,
         "unit": "seconds"
       },
-      "id": "638cf076-0bec-422e-a5ab-af2141b1ebca",
-      "name": "Wait for Image Generation",
+      "id": "b082621f-9bf6-4a89-8f9d-44268f99c9e7",
+      "name": "Wait for Cover Art",
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1,
       "position": [
-        32,
-        -152
+        -528,
+        -320
       ],
-      "webhookId": "83b6d761-fa94-44a7-9c10-eac91676eea8"
+      "webhookId": "cover-art-webhook-id"
     },
     {
       "parameters": {
@@ -261,13 +467,13 @@
         "genericAuthType": "httpHeaderAuth",
         "options": {}
       },
-      "id": "8ffa8c98-c3fc-41a8-a12c-283574c6bb32",
-      "name": "Poll Generation Status",
+      "id": "bedcebb2-f63a-4362-9ad2-e8024bf83667",
+      "name": "Poll Cover Art Status",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        256,
-        -224
+        -304,
+        -320
       ],
       "credentials": {
         "httpHeaderAuth": {
@@ -278,15 +484,15 @@
     },
     {
       "parameters": {
-        "jsCode": "// Check if image generation is complete and extract image URL\nconst response = $input.first().json;\n\nconsole.log('Full response:', JSON.stringify(response, null, 2));\nconsole.log('Response status:', response.status);\nconsole.log('Has images array:', !!response.images);\nconsole.log('Images length:', response.images?.length);\n\n// Check if we already have images (completed response)\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  console.log('Image found, extracting URL:', response.images[0].url);\n  return {\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      originalResponse: response\n    }\n  };\n}\n\n// If still in queue, throw error to trigger retry\nif (response.status === 'IN_QUEUE') {\n  const queuePos = response.metrics?.queue_position || 'unknown';\n  throw new Error(`Image still generating. Queue position: ${queuePos}. Retrying...`);\n}\n\n// If completed status but no images (fallback)\nif (response.status === 'COMPLETED') {\n  throw new Error('No images found in completed response');\n}\n\n// Handle failed status\nif (response.status === 'FAILED') {\n  throw new Error(`Image generation failed: ${response.error || 'Unknown error'}`);\n}\n\n// If no status but we have images, treat as completed\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  return {\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      originalResponse: response\n    }\n  };\n}\n\n// Handle other cases\nthrow new Error(`Unexpected response format. Status: ${response.status || 'undefined'}, Has images: ${!!response.images}`);"
+        "jsCode": "// Check if cover art generation is complete and extract image URL\nconst response = $input.first().json;\n\nconsole.log('Cover Art Response:', JSON.stringify(response, null, 2));\n\n// Check if we already have images (completed response)\nif (response.images && Array.isArray(response.images) && response.images.length > 0) {\n  console.log('Cover art found:', response.images[0].url);\n  return [{\n    json: {\n      imageUrl: response.images[0].url,\n      requestId: response.request_id || 'unknown',\n      status: 'COMPLETED',\n      imageType: 'cover',\n      originalResponse: response\n    }\n  }];\n}\n\n// If still in queue, throw error to trigger retry\nif (response.status === 'IN_QUEUE') {\n  const queuePos = response.metrics?.queue_position || 'unknown';\n  throw new Error(`Cover art still generating. Queue position: ${queuePos}. Retrying...`);\n}\n\n// If completed status but no images\nif (response.status === 'COMPLETED') {\n  throw new Error('No cover art found in completed response');\n}\n\n// Handle failed status\nif (response.status === 'FAILED') {\n  throw new Error(`Cover art generation failed: ${response.error || 'Unknown error'}`);\n}\n\nthrow new Error(`Unexpected response format. Status: ${response.status || 'undefined'}`);"
       },
-      "id": "4d9a22df-9b83-4753-a504-6a850e1905b6",
-      "name": "Check Generation Status",
+      "id": "48fd74d5-621f-4290-b2d0-68c6e879f66e",
+      "name": "Check Cover Art Status",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        480,
-        -152
+        -80,
+        -320
       ]
     },
     {
@@ -302,83 +508,48 @@
           }
         }
       },
-      "id": "bb0cc2d5-d98f-4127-bafd-0d9f3147715b",
-      "name": "Download Image",
+      "id": "0a0624f6-8f10-461c-9ede-2564ffb3188c",
+      "name": "Download Cover Art",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        704,
-        -152
+        160,
+        -320
       ]
     },
     {
       "parameters": {
-        "operation": "upload",
-        "requestOptions": {}
-      },
-      "id": "9ebece3d-4e98-44d9-925d-a84ffc5f9d0b",
-      "name": "Upload to Firebase Storage",
-      "type": "n8n-nodes-base.googleCloudStorage",
-      "typeVersion": 1,
-      "position": [
-        928,
-        -152
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "// Aggregate all image URLs after the loop\nconst allScenes = $input.all();\nconst imageUrls = allScenes.map(scene => {\n  const storageData = scene.json;\n  return `https://firebasestorage.googleapis.com/v0/b/${storageData.bucket}/o/${encodeURIComponent(storageData.name)}?alt=media`;\n});\n\nconst storyData = $('Parse Plot JSON').first().json;\nconst narrativeResponse = $('Narrative Weaver').first().json;\nconst coverArtData = $('Generate Cover Art').first().json;\n\n// Handle different response structures from Gemini agents\nlet storyText;\nif (narrativeResponse.output) {\n  // LangChain agent response structure\n  storyText = narrativeResponse.output;\n} else if (narrativeResponse.text) {\n  // Direct text response\n  storyText = narrativeResponse.text;\n} else if (narrativeResponse.content && narrativeResponse.content[0] && narrativeResponse.content[0].text) {\n  // Anthropic-style response structure\n  storyText = narrativeResponse.content[0].text;\n} else if (typeof narrativeResponse === 'string') {\n  // String response\n  storyText = narrativeResponse;\n} else {\n  // Try to find text in the response\n  storyText = narrativeResponse.message || narrativeResponse.response || JSON.stringify(narrativeResponse);\n}\n\n// Get cover art URL\nlet coverArtUrl = null;\nif (coverArtData.images && coverArtData.images.length > 0) {\n  coverArtUrl = coverArtData.images[0].url;\n}\n\nreturn {\n  json: {\n    imageUrls: imageUrls,\n    coverArtUrl: coverArtUrl,\n    storyTitle: storyData.title,\n    storyText: storyText,\n    plotData: storyData,\n    sceneCount: imageUrls.length\n  }\n};"
-      },
-      "id": "d02f73d7-d51c-4ca8-b24e-382b8841cdc3",
-      "name": "Aggregate Results",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1152,
-        -152
-      ]
-    },
-    {
-      "parameters": {
-        "authentication": "serviceAccount",
-        "operation": "update",
-        "projectId": "storysprout-a1166",
-        "collection": "n8nStories",
-        "documentId": "={{ $('Create Story Document').first().json.id }}",
-        "fields": {
-          "studentName": "Angel",
-          "grade": 6,
-          "storyTitle": "={{ $json.storyTitle }}",
-          "storyBody": "={{ $json.storyText }}",
-          "vocabulary": [],
-          "imagePrompt": "Generated by StorySphere AI",
-          "quiz": {
-            "multipleChoice": [],
-            "openEnded": []
-          },
-          "recipientType": "student",
-          "recipientEmail": "angeld0427@icloud.com",
-          "subject": "={{ $json.storyTitle }} - Your Daily Adventure! 🚀",
-          "status": "pending_review",
-          "processedAt": "={{ $now }}",
-          "imageUrls": "={{ $json.imageUrls }}",
-          "coverArtUrl": "={{ $json.coverArtUrl }}",
-          "metadata": {
-            "n8nWorkflowId": "story-generation-workflow",
-            "n8nExecutionId": "={{ $execution.id }}",
-            "deliveryAttempts": 0,
-            "sceneCount": "={{ $json.sceneCount }}",
-            "plotData": "={{ $json.plotData }}"
+        "method": "POST",
+        "url": "=https://storage.googleapis.com/upload/storage/v1/b/storysprout-a1166.firebasestorage.app/o?uploadType=media&name=cover_art/{{ $now.toFormat('yyyy-MM-dd-HHmmss') }}.jpg",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "binaryData",
+        "bodyBinaryPropertyName": "imageData",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "image/jpeg"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {
+              "followRedirects": true
+            }
           }
         }
       },
-      "id": "6b96eef9-54bc-4698-8ed4-f86af2d634bf",
-      "name": "Finalize Story",
-      "type": "n8n-nodes-base.googleFirebaseCloudFirestore",
-      "typeVersion": 1,
+      "id": "f4b4357f-02bb-4c4e-9cc6-91e79e6b839b",
+      "name": "Upload Cover Art to Firebase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
-        1376,
-        -152
+        592,
+        -320
       ],
       "credentials": {
         "googleApi": {
@@ -389,23 +560,31 @@
     },
     {
       "parameters": {
-        "modelName": "models/gemini-2.5-pro",
+        "promptType": "define",
+        "text": "=You are an educational assessment expert specializing in reading comprehension for 5th and 6th grade students (ages 10-12). Your task is to create engaging quiz questions based on a story.\n\nCRITICAL INSTRUCTIONS:\n- Create questions that test comprehension, critical thinking, and recall\n- Questions should be age-appropriate and clear\n- Multiple choice questions must have 4 options with only ONE correct answer\n- Short answer questions should encourage thoughtful responses\n- Your output MUST be a single, valid JSON object\n- Do not include any explanatory text, markdown formatting, or anything before or after the {} brackets\n\nSTORY INFORMATION:\nTitle: {{ $('Parse Plot JSON').first().json.title }}\nStory Text: {{ $('Narrative Weaver').first().json.output }}\nMoral Lesson: {{ $('Parse Plot JSON').first().json.moral_lesson_summary }}\n\nJSON OUTPUT STRUCTURE:\n{\n  \"multipleChoice\": [\n    {\n      \"question\": \"Clear, specific question about the story\",\n      \"options\": [\"Option A\", \"Option B\", \"Option C\", \"Option D\"],\n      \"correctAnswer\": \"Option B\",\n      \"explanation\": \"Brief explanation of why this is correct\"\n    }\n  ],\n  \"shortAnswer\": [\n    {\n      \"question\": \"Open-ended question that requires thoughtful response\",\n      \"sampleAnswer\": \"An example of a good answer\",\n      \"keyPoints\": [\"Point 1 that should be mentioned\", \"Point 2 that should be mentioned\"]\n    }\n  ]\n}\n\nGENERATE:\n- 5 multiple choice questions covering different parts of the story\n- 3 short answer questions about themes, character development, and the moral lesson",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1,
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
       "position": [
-        -1848,
-        72
+        -976,
+        160
       ],
-      "id": "7e541210-2c69-467c-be60-2d6459e8fb78",
-      "name": "Google Gemini Chat Model",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "YQ4gkrIy96JprmDz",
-          "name": "shakdaman-Paid"
-        }
-      }
+      "id": "quiz-generator-id",
+      "name": "Quiz Generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from Quiz Generator (Gemini/LangChain format)\nconst response = $input.first().json;\n\n// Handle different response structures from Gemini agents\nlet content;\nif (response.output) {\n  content = response.output;\n} else if (response.text) {\n  content = response.text;\n} else if (response.content && response.content[0] && response.content[0].text) {\n  content = response.content[0].text;\n} else if (typeof response === 'string') {\n  content = response;\n} else {\n  content = response.message || response.response || JSON.stringify(response);\n}\n\n// Clean up the content (remove markdown formatting, extra whitespace)\ncontent = content.trim().replace(/^```json\\s*/, '').replace(/\\s*```$/, '');\n\ntry {\n  const parsedContent = JSON.parse(content);\n  return [{\n    json: parsedContent\n  }];\n} catch (error) {\n  throw new Error('Failed to parse JSON from Quiz Generator: ' + error.message + '\\nContent: ' + content.substring(0, 200) + '...');\n}"
+      },
+      "id": "parse-quiz-json-id",
+      "name": "Parse Quiz JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        160
+      ]
     },
     {
       "parameters": {
@@ -415,31 +594,11 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
-        -1272,
-        72
+        -976,
+        384
       ],
-      "id": "6ec3511d-26ae-4d6b-9f09-7eb6a02fe5b7",
-      "name": "Google Gemini Chat Model1",
-      "credentials": {
-        "googlePalmApi": {
-          "id": "YQ4gkrIy96JprmDz",
-          "name": "shakdaman-Paid"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "modelName": "models/gemini-2.5-pro",
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
-      "typeVersion": 1,
-      "position": [
-        -696,
-        72
-      ],
-      "id": "ebdf66a8-60da-4761-bbda-ff56ed758b4d",
-      "name": "Google Gemini Chat Model2",
+      "id": "quiz-gemini-model-id",
+      "name": "Google Gemini Chat Model - Quiz",
       "credentials": {
         "googlePalmApi": {
           "id": "YQ4gkrIy96JprmDz",
@@ -449,7 +608,7 @@
     }
   ],
   "pinData": {
-    "Create Story Document": [
+    "Create Story Document1": [
       {
         "json": {
           "_name": "projects/storysprout-a1166/databases/(default)/documents/n8nStories/2025-09-30-233307-story",
@@ -457,30 +616,6 @@
           "_createTime": "2025-09-30T21:33:08.073159Z",
           "_updateTime": "2025-09-30T21:33:08.073159Z",
           "desciption": null
-        }
-      }
-    ],
-    "Idea Spark": [
-      {
-        "json": {
-          "output": "```json\n{\n  \"prompt\": \"Sixth-grader Angel and his younger brother Jayson discover a strange, metallic pod in the woods that can record and play back sounds from a few minutes into the future, forcing them to take responsibility when they hear an impending accident they must race to prevent.\",\n  \"moral\": \"Understanding that having a special ability or knowledge comes with the responsibility to use it for good, even when it's difficult.\",\n  \"genre\": \"Sci-Fi\",\n  \"estimatedLength\": \"1200-1500 words\"\n}\n```"
-        }
-      }
-    ],
-    "Parse Idea JSON": [
-      {
-        "json": {
-          "prompt": "Sixth-grader Angel and his younger brother Jayson discover a strange, metallic pod in the woods that can record and play back sounds from a few minutes into the future, forcing them to take responsibility when they hear an impending accident they must race to prevent.",
-          "moral": "Understanding that having a special ability or knowledge comes with the responsibility to use it for good, even when it's difficult.",
-          "genre": "Sci-Fi",
-          "estimatedLength": "1200-1500 words"
-        }
-      }
-    ],
-    "Plot Architect": [
-      {
-        "json": {
-          "output": "```json\n{\n  \"title\": \"The Secret of the Founder's Map\",\n  \"logline\": \"Two students with clashing personalities must learn to work together using an ancient map to uncover their town's forgotten history.\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan.\"\n    },\n    {\n      \"name\": \"Jayson\",\n      \"description\": \"An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles.\"\n    }\n  ],\n  \"setting\": \"The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Paired for a history project, studious Angel and impulsive Jayson bicker in the school library, unable to agree on a topic.\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"Jayson accidentally knocks a loose book, revealing a hidden compartment containing a cryptic, hand-drawn map signed by the town's founders.\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"They follow the map's trail through Oakhaven, with Angel deciphering historical riddles and Jayson solving physical puzzles, slowly and grudgingly realizing they need each other's different skills to progress.\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"At the final location, the old clock tower, they face a complex puzzle that requires Angel's code-breaking and Jayson's mechanical tinkering to be performed at the same time, forcing them to finally trust each other completely to succeed.\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"They unearth the time capsule, which contains not treasure, but a message about community and collaboration. They present their amazing discovery for their project, earning an A+ and forging a new friendship built on mutual respect for their unique talents.\"\n    }\n  ],\n  \"moral_lesson_summary\": \"The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team.\"\n}\n```"
         }
       }
     ],
@@ -534,7 +669,150 @@
     "Narrative Weaver": [
       {
         "json": {
-          "output": "The summer sun beat down on the community park, making the freshly cut grass smell sweet and sharp. The air buzzed with the excited shouts of kids and the thud of soccer balls. Angel, twelve years old and with feet that moved like lightning, scanned the crowd. His eyes, however, weren't on the other players. They were fixed on the table near the concession stand where Coach Davis was standing. Next to the coach, winking in the sunlight, was the grand prize: a golden trophy so big and shiny it looked like it belonged to a professional league.\n\nCoach Davis blew his whistle, a sharp tweet that cut through the noise. “Alright, listen up, Fireballs! This year, we’re doing something different for our end-of-summer event. It’s the first-ever Summer Soccer Sprint! A two-on-two tournament. The winning pair takes home the gold.”\n\nA murmur of excitement rippled through the teams. Angel felt a jolt, a surge of pure ambition. He could already picture it: that gleaming trophy on the shelf in his room. He’d win it. He had to.\n\n“I’ll post the team pairings now,” the coach continued, tacking a sheet of paper to the bulletin board.\n\nAngel’s ten-year-old brother, Jayson, bounced on the balls of his feet beside him. “I hope we get paired together! We’d be unstoppable!”\n\nAngel managed a tight smile. He loved his brother, but Jayson was… well, he was Jayson. Eager, full of ideas, but his feet sometimes got tangled up when he was trying to do a simple crossover. Angel was the star. He was the one who scored the goals. To win that trophy, he needed a clear path to the net, not a well-meaning roadblock. When he saw their names on the list side-by-side—*Angel & Jayson Martinez*—a knot of frustration tightened in his stomach. This just got a lot harder.\n\nDuring their first practice session, the problem became clear. Angel zipped across the small field, the ball a magnet to his cleats. “Jayson, over here!” he’d shout, and Jayson would dutifully pass. But Angel never passed back. He’d deke, spin, and fire a shot into the net.\n\n“Awesome goal!” Jayson panted, running up to him. “Hey, I was thinking, if I draw the defender to the left, you could cut right and—”\n\n“Don’t worry about strategy,” Angel cut him off, not unkindly, but with a finality that stung. “Just get the ball and pass it to me. I’ll handle the rest.”\n\nJayson’s face fell. He kicked at a loose clump of grass. “Oh. Okay.” For the rest of the practice, he was quieter, his movements less certain. They were on the same team, but they weren't playing together.\n\nTheir first match was against a much weaker team, a pair of twins who were still learning to control their passes. Angel scored both goals for a 2-1 victory, but it wasn't the easy win he’d expected. He was drenched in sweat and his legs ached from doing all the work. On the final play, with the other team about to tie the score, Jayson had thrown himself in front of a powerful shot, blocking it with his shin. The ball ricocheted out of bounds as the whistle blew. Angel gave him a quick, dismissive nod and jogged off for a water bottle, barely acknowledging that his brother had just saved the game. From the sidelines, Coach Davis watched them, his expression thoughtful.\n\nBefore their next match, the coach pulled Angel aside, away from the cheering crowd. “Nice win out there,” he said, his voice calm.\n\n“Thanks, Coach,” Angel said, puffing out his chest a little. “I got both goals.”\n\n“You did,” Coach Davis agreed. “Hard work. How did you feel at the end of that game?”\n\nAngel shrugged. “Tired.”\n\n“You looked it. Did you see Jayson’s block on that last shot? That was a game-saver.”\n\nAngel mumbled, “Yeah, it was good.” He didn’t like where this was going.\n\nCoach Davis didn't lecture. He just leaned against the bleachers. “You know, there was this famous pro team, years ago. They had one player who was a superstar, could score from anywhere. But they didn’t win the championship until he learned to trust the other ten guys on the field. He realized he couldn’t carry the whole team on his own.” The coach gestured with his chin toward the prize table. “A trophy is a lot heavier when you try to lift it alone, Angel.”\n\nThe words hung in the air, heavier than any trophy. Angel walked back to the field, the coach’s story echoing in his mind.\n\nThe final match was against the Red Raptors, two fast and aggressive players who had bulldozed their way through the tournament. The game was a blur of frantic energy. The Raptors scored first. Angel, fueled by a mix of frustration and determination, answered with a blistering shot from the wing. The score was tied 1-1. The clock on the scoreboard ticked down: one minute left.\n\nThe ball came to Angel. He trapped it perfectly. The crowd noise faded to a dull roar in his ears. He saw a path, a narrow lane to the goal. It was a tough angle, a low-percentage shot, but he’d made harder ones before. *I can do this,* he thought. *I can win this.*\n\nThen, out of the corner of his eye, he saw a flash of his own team’s blue jersey. It was Jayson. He’d found an open space right in front of the net, his hands up slightly, his eyes wide with anticipation. The old Angel, the one from the start of the tournament, would have ignored him. He would have taken the glorious, difficult shot himself.\n\nBut as he looked at his brother, he saw the trust in Jayson’s face. He heard Coach Davis’s voice in his head: *A trophy is a lot heavier when you try to lift it alone.*\n\nIn a split-second, he made his choice.\n\nAngel faked the shot. The two defenders lunged toward him, completely falling for the bluff. In the space they created, Angel sent a crisp, perfect pass right to Jayson’s feet.\n\nJayson didn’t hesitate. He didn’t try to do anything fancy. He just planted his foot and took the shot. It wasn’t a rocket like Angel’s, but it was clean and precise. The ball sailed in a gentle arc, right over the diving goalie’s outstretched fingers, and settled into the back of the net.\n\nA fraction of a second later, the final buzzer shrieked across the park.\n\nThey had won.\n\nA swarm of friends and teammates mobbed Jayson, whooping and cheering. Angel hung back for a moment, a strange, warm feeling spreading through his chest. It wasn’t the fiery pride of scoring himself; it was something bigger, something better. Jayson broke free from the group and sprinted toward him, his face lit up with a grin that seemed to stretch from ear to ear.\n\n“We did it!” Jayson yelled, throwing his arms around his brother. “Angel, we did it!”\n\nNot *I* did it. *We* did it.\n\nAngel hugged him back, ruffling his sweaty hair. A real, genuine grin spread across his own face. “Yeah, Jayson,” he said, his voice thick with emotion. “We did.”\n\nWhen Coach Davis presented the trophy, he held it out for both of them. Angel instinctively stepped back. “You hold it first,” he told Jayson. “You scored the winning goal.”\n\nJayson’s eyes went wide, and he reverently took the heavy, golden cup. After a moment, he held it out to Angel. “Here, you help.”\n\nTogether, they lifted it high. Angel was surprised. In their shared hands, the trophy felt surprisingly light.\n\nWalking home, the late afternoon sun casting long shadows ahead of them, they passed the trophy back and forth. They weren't just replaying the final goal anymore.\n\n“Next time,” Jayson said, his mind already racing, “if you do that fake-shot move again, I can cut behind the defender and you can chip it over the top.”\n\n“Yeah, that could work,” Angel said, picturing the play. “And if they double-team me near the corner, you stay open near the middle. I’ll find you.”\n\nHe looked over at his brother, who was carefully polishing a smudge off the trophy’s base with his shirt. The golden prize was beautiful, but Angel realized it wasn't the trophy itself that mattered. It was the feeling of winning it with his brother by his side. He wasn't just a star player anymore. He was a big brother. And he was a teammate. And that felt better than any solo victory ever could."
+          "output": "The scent of balsa wood and model glue filled the garage, a smell Angel equated with pure happiness. He hunched over their workbench, a single beam of light from his desk lamp illuminating the delicate skeleton of a glider wing. With the focus of a surgeon, he applied a tiny bead of glue along a join, holding his breath until it set.\n\n“Are you done with that one piece yet?” Jayson’s voice was laced with impatience. He was slumped on a stool across the bench, listlessly spinning a screwdriver on the cement floor. “We’ve been at this for three hours. My eyeballs are starting to dry out.”\n\n“It has to be perfect, Jay,” Angel said without looking up. At twelve, he was a year older than Jayson, and a hundred years more patient. “Look at the blueprint. The curvature of the airfoil has to be exact, or we’ll get turbulence instead of lift.” He ran a gentle finger along the wood. “It’s like an art.”\n\n“It’s like watching paint dry,” Jayson grumbled, kicking at a pile of wood shavings. “The school’s annual Aviation Challenge is in two weeks. At this rate, we’ll have one wing and a note that says, ‘The other one is coming soon.’” He threw his hands up. “There has to be a faster way.”\n\nAngel finally looked at his brother, his brow furrowed. “The whole point is to build it ourselves. That’s the challenge. It’s supposed to take time.”\n\nJayson sighed, pushing himself off the stool. “I’m gonna go… research fuselage construction techniques.” He headed for the door leading into the house, but Angel knew his brother’s version of research usually involved watching stunt videos online.\n\nUp in his room, Jayson did exactly that for ten minutes before his boredom returned. He begrudgingly typed “model glider kits” into the search bar. He clicked through a few hobby sites, and then he saw it. A banner ad flashed at the top of the screen: “Aero-Glide 5000: Laser-Cut for Perfect Flight. Win Every Time!”\n\nHe clicked. The webpage was slick, filled with photos of a stunning, professionally finished glider. The parts were laser-etched balsa wood, promising “unmatched precision” and “flawless aerodynamics.” A complete kit, delivered in two days. It was a shortcut. It was cheating. But the image of that perfect glider soaring through the air, a blue ribbon pinned to its wing, was powerful. He glanced at his piggy bank on the shelf, full of his allowance money. Downstairs, he could hear the soft, rhythmic sound of Angel sanding another piece of wood. So slow. So tedious. With a knot of guilt and excitement tightening in his stomach, Jayson clicked “Add to Cart.”\n\nThe package arrived two days later in a plain brown box. Jayson managed to intercept the delivery driver before his mom saw it, smuggling the box up to his room like a secret agent. He waited until Saturday, when Angel was at a friend’s house for the afternoon. With the coast clear, he sprinted to the garage.\n\nHe carefully swept their hand-cut, slightly uneven pieces into a shoebox and shoved it under the workbench. Then, he opened the new box. The parts inside were breathtaking. They were smooth, perfect, and smelled faintly of burnt wood from the laser. The pieces fit together with a satisfying click, no sanding required. In less than an hour, the entire glider—fuselage, wings, and tail assembly—was complete. It looked exactly like the one on the website. Professional. Unbeatable.\n\nWhen Angel got home, he walked into the garage and stopped dead. “Whoa! Jay! You did all this?” He circled the completed glider, his eyes wide with amazement. “How did you get the cuts so clean? And everything lines up perfectly! You must have had a major burst of energy.”\n\n“Yeah, something like that,” Jayson mumbled, avoiding his brother’s eyes. “Just got in the zone, I guess.”\n\n“In the zone? You’re a master builder!” Angel beamed, running a hand reverently over the smooth wing. “We are definitely going to win with this.”\n\nJayson felt a sharp pang of guilt. Angel’s praise felt like a stone in his gut. This wasn’t their work. It was his lie.\n\nThe day of the Aviation Challenge, the school gymnasium buzzed with the chaotic energy of two dozen teams. The air was a cacophony of excited chatter and the faint squeak of sneakers on polished wood. Models of all shapes and sizes sat on display tables—some were clumsy and coated in too much glue, others were sleek and painted with bold racing stripes.\n\nAngel proudly set their glider on their assigned table, polishing an imaginary speck of dust off its nose. He explained the finer points of their \"design\" to anyone who would listen. Jayson just stood beside him, hands jammed in his pockets, his stomach churning. He couldn't shake the feeling that everyone knew. That their glider was a fraud.\n\nMr. Harrison, the retired aerospace engineer who judged the competition every year, made his way down their row. He stopped at their table, his kind, crinkly eyes studying their entry. He picked it up, testing its weight and balance.\n\n“Well, now,” he said, his voice a low rumble of approval. “This is a fine piece of work, boys. Just look at that impeccable craftsmanship. Truly professional.”\n\nAngel swelled with pride. “Thanks, Mr. Harrison. We worked really hard on it.”\n\nJayson just nodded, feeling his face flush with heat. The judge’s compliment felt like an accusation.\n\nFinally, it was their turn to fly. Angel carried the glider to the launch line like it was a sacred relic. “You ready for this?” he whispered to Jayson, his eyes sparkling. Jayson gave a weak thumbs-up.\n\nAngel launched the glider with a smooth, practiced motion. It caught the air instantly, soaring in a long, graceful arc across the gymnasium. It flew further than any other plane, landing with a soft whisper near the far wall. The gym erupted in applause.\n\n“And the winner of this year’s Aviation Challenge,” Mr. Harrison announced into a microphone a few minutes later, “is the team of Angel and Jayson Reyes!”\n\nAngel let out a whoop of joy, grabbing Jayson in a hug. Jayson felt numb as they walked up to the stage to receive the large, golden trophy. As Mr. Harrison handed it to them, he leaned in. “I have to ask,” he said with a smile, “what kind of tool did you use for that laser-cut precision on the wing struts? It’s flawless.”\n\nThe words hit Jayson like a physical blow. Angel’s smile faltered. He looked from Mr. Harrison to the glider, then to his brother.\n\n“Laser-cut?” Angel said, his voice small and confused. “We… we used a craft knife and sandpaper.” He stared at Jayson, a dawning horror in his eyes. The pieces clicked together in his head, just like the pieces of the kit. The sudden progress. The perfect cuts. Jayson’s strange, quiet mood. “Jay?”\n\nThe whole gym was quiet, watching them. Jayson couldn't look at his brother. He couldn't look at anyone. The lie was too heavy to hold anymore. “I bought it,” he whispered, the words tasting like ash. “It was a kit. I’m sorry.”\n\nThe silence that followed was worse than any shouting. Angel’s face crumpled, not with anger, but with a deep, bottomless hurt. He put his half of the trophy down on the stage and walked away without a word.\n\nBack in the garage, the gleaming trophy sat on the workbench between them, an unwelcome intruder. The air was thick with unspoken words. Angel finally broke the silence, his voice quiet.\n\n“I don’t care about the stupid trophy, Jay,” he said, tracing a pattern in the sawdust on the bench. “I cared about building it. With you. That was the fun part.”\n\nTears welled in Jayson’s eyes. His brother was right. The best moments hadn’t been the idea of winning, but the hours they’d spent together in the garage, laughing over a crooked cut or figuring out a tricky part of the blueprint. The journey, not the destination.\n\n“I know,” Jayson said, his voice choked. “I’m so sorry, Angel. I just wanted to win so badly, I forgot what we were really doing.” He looked at his brother, his apology genuine and raw. “It was dumb. I messed up.”\n\nA long moment passed. Then, Angel nodded slowly. “Yeah. You did.” He looked at the trophy, then back at Jayson. “So, what are we going to do about it?”\n\nJayson knew what they had to do. The next morning, they returned the trophy to Mr. Harrison with a quiet explanation. Back in the garage, the space felt lighter, cleaner. Jayson reached under the workbench and pulled out the dusty shoebox containing their original, half-finished glider. He placed the imperfect, hand-cut fuselage on the table.\n\nHe picked up a piece of sandpaper and looked at his brother.\n\nA small smile touched Angel’s lips. He reached for the bottle of wood glue. “The curvature of the airfoil has to be exact,” he said, his voice filled with its old, patient warmth. And together, they got back to work."
+        }
+      }
+    ],
+    "Plot Architect": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"title\": \"The Secret of the Founder's Map\",\n  \"logline\": \"Two students with clashing personalities must learn to work together using an ancient map to uncover their town's forgotten history.\",\n  \"characters\": [\n    {\n      \"name\": \"Angel\",\n      \"description\": \"A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan.\"\n    },\n    {\n      \"name\": \"Jayson\",\n      \"description\": \"An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles.\"\n    }\n  ],\n  \"setting\": \"The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.\",\n  \"plot_points\": [\n    {\n      \"scene\": 1,\n      \"title\": \"Opening\",\n      \"description\": \"Paired for a history project, studious Angel and impulsive Jayson bicker in the school library, unable to agree on a topic.\"\n    },\n    {\n      \"scene\": 2,\n      \"title\": \"Inciting Incident\",\n      \"description\": \"Jayson accidentally knocks a loose book, revealing a hidden compartment containing a cryptic, hand-drawn map signed by the town's founders.\"\n    },\n    {\n      \"scene\": 3,\n      \"title\": \"Rising Action\",\n      \"description\": \"They follow the map's trail through Oakhaven, with Angel deciphering historical riddles and Jayson solving physical puzzles, slowly and grudgingly realizing they need each other's different skills to progress.\"\n    },\n    {\n      \"scene\": 4,\n      \"title\": \"Climax\",\n      \"description\": \"At the final location, the old clock tower, they face a complex puzzle that requires Angel's code-breaking and Jayson's mechanical tinkering to be performed at the same time, forcing them to finally trust each other completely to succeed.\"\n    },\n    {\n      \"scene\": 5,\n      \"title\": \"Resolution\",\n      \"description\": \"They unearth the time capsule, which contains not treasure, but a message about community and collaboration. They present their amazing discovery for their project, earning an A+ and forging a new friendship built on mutual respect for their unique talents.\"\n    }\n  ],\n  \"moral_lesson_summary\": \"The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team.\"\n}\n```"
+        }
+      }
+    ],
+    "Idea Spark": [
+      {
+        "json": {
+          "output": "```json\n{\n  \"prompt\": \"Sixth-grader Angel and his younger brother Jayson discover a strange, metallic pod in the woods that can record and play back sounds from a few minutes into the future, forcing them to take responsibility when they hear an impending accident they must race to prevent.\",\n  \"moral\": \"Understanding that having a special ability or knowledge comes with the responsibility to use it for good, even when it's difficult.\",\n  \"genre\": \"Sci-Fi\",\n  \"estimatedLength\": \"1200-1500 words\"\n}\n```"
+        }
+      }
+    ],
+    "Parse Idea JSON": [
+      {
+        "json": {
+          "prompt": "Sixth-grader Angel and his younger brother Jayson discover a strange, metallic pod in the woods that can record and play back sounds from a few minutes into the future, forcing them to take responsibility when they hear an impending accident they must race to prevent.",
+          "moral": "Understanding that having a special ability or knowledge comes with the responsibility to use it for good, even when it's difficult.",
+          "genre": "Sci-Fi",
+          "estimatedLength": "1200-1500 words"
+        }
+      }
+    ],
+    "Generate Cover Art Prompt": [
+      {
+        "json": {
+          "coverPrompt": "Professional children's book cover art, Pixar animation style, ultra-high quality digital illustration, vibrant colors, dramatic lighting. \n\nCHARACTER DESCRIPTIONS:\nAngel is a light-skinned Latino, confident 12-year-old boy with black box braids who likes to wear basketball jerseys and hoodies of various colors. \nJayson is a slightly lighter-skinned Latino, curious 10-year-old boy with cornrow braids who likes to wear baseball jerseys or sweatsuits.\n\nSTORY CONTEXT:\nTitle: \"The Secret of the Founder's Map\"\nGenre: Adventure\nSetting: The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.\nStory Summary: Two students with clashing personalities must learn to work together using an ancient map to uncover their town's forgotten history.\n\nThe cover should visually capture the essence of this Adventure story set in The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.. The mood and composition should reflect the theme: The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team.\n\nCOVER SPECIFICATIONS: \n- Standard children's book cover dimensions (8.5\" x 11\" or 3:4 aspect ratio)\n- The title \"The Secret of the Founder's Map\" MUST be prominently displayed at the top in an elegant, readable font with subtle glow effect\n- Author name \"Shak & Jenn AI\" must be printed at the bottom\n- Professional book cover layout with proper margins and spacing\n- High contrast, detailed, award-winning illustration quality\n- 4K resolution, cinematic composition\n- Perfect for printing and digital display\n- Visually stunning and immediately captures attention\n- Consistent with professional children's book publishing standards",
+          "storyTitle": "The Secret of the Founder's Map",
+          "storyText": "The scent of balsa wood and model glue filled the garage, a smell Angel equated with pure happiness. He hunched over their workbench, a single beam of light from his desk lamp illuminating the delicate skeleton of a glider wing. With the focus of a surgeon, he applied a tiny bead of glue along a join, holding his breath until it set.\n\n“Are you done with that one piece yet?” Jayson’s voice was laced with impatience. He was slumped on a stool across the bench, listlessly spinning a screwdriver on the cement floor. “We’ve been at this for three hours. My eyeballs are starting to dry out.”\n\n“It has to be perfect, Jay,” Angel said without looking up. At twelve, he was a year older than Jayson, and a hundred years more patient. “Look at the blueprint. The curvature of the airfoil has to be exact, or we’ll get turbulence instead of lift.” He ran a gentle finger along the wood. “It’s like an art.”\n\n“It’s like watching paint dry,” Jayson grumbled, kicking at a pile of wood shavings. “The school’s annual Aviation Challenge is in two weeks. At this rate, we’ll have one wing and a note that says, ‘The other one is coming soon.’” He threw his hands up. “There has to be a faster way.”\n\nAngel finally looked at his brother, his brow furrowed. “The whole point is to build it ourselves. That’s the challenge. It’s supposed to take time.”\n\nJayson sighed, pushing himself off the stool. “I’m gonna go… research fuselage construction techniques.” He headed for the door leading into the house, but Angel knew his brother’s version of research usually involved watching stunt videos online.\n\nUp in his room, Jayson did exactly that for ten minutes before his boredom returned. He begrudgingly typed “model glider kits” into the search bar. He clicked through a few hobby sites, and then he saw it. A banner ad flashed at the top of the screen: “Aero-Glide 5000: Laser-Cut for Perfect Flight. Win Every Time!”\n\nHe clicked. The webpage was slick, filled with photos of a stunning, professionally finished glider. The parts were laser-etched balsa wood, promising “unmatched precision” and “flawless aerodynamics.” A complete kit, delivered in two days. It was a shortcut. It was cheating. But the image of that perfect glider soaring through the air, a blue ribbon pinned to its wing, was powerful. He glanced at his piggy bank on the shelf, full of his allowance money. Downstairs, he could hear the soft, rhythmic sound of Angel sanding another piece of wood. So slow. So tedious. With a knot of guilt and excitement tightening in his stomach, Jayson clicked “Add to Cart.”\n\nThe package arrived two days later in a plain brown box. Jayson managed to intercept the delivery driver before his mom saw it, smuggling the box up to his room like a secret agent. He waited until Saturday, when Angel was at a friend’s house for the afternoon. With the coast clear, he sprinted to the garage.\n\nHe carefully swept their hand-cut, slightly uneven pieces into a shoebox and shoved it under the workbench. Then, he opened the new box. The parts inside were breathtaking. They were smooth, perfect, and smelled faintly of burnt wood from the laser. The pieces fit together with a satisfying click, no sanding required. In less than an hour, the entire glider—fuselage, wings, and tail assembly—was complete. It looked exactly like the one on the website. Professional. Unbeatable.\n\nWhen Angel got home, he walked into the garage and stopped dead. “Whoa! Jay! You did all this?” He circled the completed glider, his eyes wide with amazement. “How did you get the cuts so clean? And everything lines up perfectly! You must have had a major burst of energy.”\n\n“Yeah, something like that,” Jayson mumbled, avoiding his brother’s eyes. “Just got in the zone, I guess.”\n\n“In the zone? You’re a master builder!” Angel beamed, running a hand reverently over the smooth wing. “We are definitely going to win with this.”\n\nJayson felt a sharp pang of guilt. Angel’s praise felt like a stone in his gut. This wasn’t their work. It was his lie.\n\nThe day of the Aviation Challenge, the school gymnasium buzzed with the chaotic energy of two dozen teams. The air was a cacophony of excited chatter and the faint squeak of sneakers on polished wood. Models of all shapes and sizes sat on display tables—some were clumsy and coated in too much glue, others were sleek and painted with bold racing stripes.\n\nAngel proudly set their glider on their assigned table, polishing an imaginary speck of dust off its nose. He explained the finer points of their \"design\" to anyone who would listen. Jayson just stood beside him, hands jammed in his pockets, his stomach churning. He couldn't shake the feeling that everyone knew. That their glider was a fraud.\n\nMr. Harrison, the retired aerospace engineer who judged the competition every year, made his way down their row. He stopped at their table, his kind, crinkly eyes studying their entry. He picked it up, testing its weight and balance.\n\n“Well, now,” he said, his voice a low rumble of approval. “This is a fine piece of work, boys. Just look at that impeccable craftsmanship. Truly professional.”\n\nAngel swelled with pride. “Thanks, Mr. Harrison. We worked really hard on it.”\n\nJayson just nodded, feeling his face flush with heat. The judge’s compliment felt like an accusation.\n\nFinally, it was their turn to fly. Angel carried the glider to the launch line like it was a sacred relic. “You ready for this?” he whispered to Jayson, his eyes sparkling. Jayson gave a weak thumbs-up.\n\nAngel launched the glider with a smooth, practiced motion. It caught the air instantly, soaring in a long, graceful arc across the gymnasium. It flew further than any other plane, landing with a soft whisper near the far wall. The gym erupted in applause.\n\n“And the winner of this year’s Aviation Challenge,” Mr. Harrison announced into a microphone a few minutes later, “is the team of Angel and Jayson Reyes!”\n\nAngel let out a whoop of joy, grabbing Jayson in a hug. Jayson felt numb as they walked up to the stage to receive the large, golden trophy. As Mr. Harrison handed it to them, he leaned in. “I have to ask,” he said with a smile, “what kind of tool did you use for that laser-cut precision on the wing struts? It’s flawless.”\n\nThe words hit Jayson like a physical blow. Angel’s smile faltered. He looked from Mr. Harrison to the glider, then to his brother.\n\n“Laser-cut?” Angel said, his voice small and confused. “We… we used a craft knife and sandpaper.” He stared at Jayson, a dawning horror in his eyes. The pieces clicked together in his head, just like the pieces of the kit. The sudden progress. The perfect cuts. Jayson’s strange, quiet mood. “Jay?”\n\nThe whole gym was quiet, watching them. Jayson couldn't look at his brother. He couldn't look at anyone. The lie was too heavy to hold anymore. “I bought it,” he whispered, the words tasting like ash. “It was a kit. I’m sorry.”\n\nThe silence that followed was worse than any shouting. Angel’s face crumpled, not with anger, but with a deep, bottomless hurt. He put his half of the trophy down on the stage and walked away without a word.\n\nBack in the garage, the gleaming trophy sat on the workbench between them, an unwelcome intruder. The air was thick with unspoken words. Angel finally broke the silence, his voice quiet.\n\n“I don’t care about the stupid trophy, Jay,” he said, tracing a pattern in the sawdust on the bench. “I cared about building it. With you. That was the fun part.”\n\nTears welled in Jayson’s eyes. His brother was right. The best moments hadn’t been the idea of winning, but the hours they’d spent together in the garage, laughing over a crooked cut or figuring out a tricky part of the blueprint. The journey, not the destination.\n\n“I know,” Jayson said, his voice choked. “I’m so sorry, Angel. I just wanted to win so badly, I forgot what we were really doing.” He looked at his brother, his apology genuine and raw. “It was dumb. I messed up.”\n\nA long moment passed. Then, Angel nodded slowly. “Yeah. You did.” He looked at the trophy, then back at Jayson. “So, what are we going to do about it?”\n\nJayson knew what they had to do. The next morning, they returned the trophy to Mr. Harrison with a quiet explanation. Back in the garage, the space felt lighter, cleaner. Jayson reached under the workbench and pulled out the dusty shoebox containing their original, half-finished glider. He placed the imperfect, hand-cut fuselage on the table.\n\nHe picked up a piece of sandpaper and looked at his brother.\n\nA small smile touched Angel’s lips. He reached for the bottle of wood glue. “The curvature of the airfoil has to be exact,” he said, his voice filled with its old, patient warmth. And together, they got back to work.",
+          "plotData": {
+          "title": "The Secret of the Founder's Map",
+          "logline": "Two students with clashing personalities must learn to work together using an ancient map to uncover their town's forgotten history.",
+          "characters": [
+            {
+              "name": "Angel",
+              "description": "A meticulous and book-smart 6th grader who loves history and believes every problem can be solved with research and a good plan."
+            },
+            {
+              "name": "Jayson",
+              "description": "An energetic and creative 5th grader who prefers to act on instinct and is skilled at solving hands-on puzzles."
+            }
+          ],
+          "setting": "The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.",
+          "plot_points": [
+            {
+              "scene": 1,
+              "title": "Opening",
+              "description": "Paired for a history project, studious Angel and impulsive Jayson bicker in the school library, unable to agree on a topic."
+            },
+            {
+              "scene": 2,
+              "title": "Inciting Incident",
+              "description": "Jayson accidentally knocks a loose book, revealing a hidden compartment containing a cryptic, hand-drawn map signed by the town's founders."
+            },
+            {
+              "scene": 3,
+              "title": "Rising Action",
+              "description": "They follow the map's trail through Oakhaven, with Angel deciphering historical riddles and Jayson solving physical puzzles, slowly and grudgingly realizing they need each other's different skills to progress."
+            },
+            {
+              "scene": 4,
+              "title": "Climax",
+              "description": "At the final location, the old clock tower, they face a complex puzzle that requires Angel's code-breaking and Jayson's mechanical tinkering to be performed at the same time, forcing them to finally trust each other completely to succeed."
+            },
+            {
+              "scene": 5,
+              "title": "Resolution",
+              "description": "They unearth the time capsule, which contains not treasure, but a message about community and collaboration. They present their amazing discovery for their project, earning an A+ and forging a new friendship built on mutual respect for their unique talents."
+            }
+          ],
+          "moral_lesson_summary": "The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team."
+          },
+          "genre": "Adventure",
+          "setting": "The story is set in the small, historic town of Oakhaven, a place where cobblestone streets meet modern storefronts. The atmosphere is cozy and sleepy, but beneath the surface lie old secrets, particularly within the dusty, forgotten 'Founder's Wing' of the Oakhaven Middle School library, a place filled with the scent of old paper and leather-bound books.",
+          "moral": "The successful discovery of the time capsule, achievable only through their combined efforts, teaches Angel and Jayson that true success comes from collaborating and valuing the different skills each person brings to a team."
+        }
+      }
+    ],
+    "Generate Cover Art": [
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "cd006424-b656-4572-8243-1811789255f8",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/cd006424-b656-4572-8243-1811789255f8",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/cd006424-b656-4572-8243-1811789255f8/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/cd006424-b656-4572-8243-1811789255f8/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 0
+        }
+      }
+    ],
+    "Wait for Cover Art": [
+      {
+        "json": {
+          "status": "IN_QUEUE",
+          "request_id": "cd006424-b656-4572-8243-1811789255f8",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/cd006424-b656-4572-8243-1811789255f8",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/cd006424-b656-4572-8243-1811789255f8/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/cd006424-b656-4572-8243-1811789255f8/cancel",
+          "logs": null,
+          "metrics": {},
+          "queue_position": 0
+        }
+      }
+    ],
+    "Poll Cover Art Status": [
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/kangaroo/M4HeV_eONCbyttYTY4V0s.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": "Here's a concept for your children's book cover, \"The Secret of the Founder's Map,\" designed in a Pixar-animation style, capturing the adventure and the essence of Oakhaven:\n\n"
+        }
+      }
+    ],
+    "Check Cover Art Status": [
+      {
+        "json": {
+          "imageUrl": "https://v3.fal.media/files/kangaroo/M4HeV_eONCbyttYTY4V0s.jpeg",
+          "requestId": "unknown",
+          "status": "COMPLETED",
+          "imageType": "cover",
+          "originalResponse": {
+            "images": [
+              {
+                "url": "https://v3.fal.media/files/kangaroo/M4HeV_eONCbyttYTY4V0s.jpeg",
+                "content_type": "image/jpeg",
+                "file_name": "output.jpeg",
+                "file_size": null
+              }
+            ],
+            "description": "Here's a concept for your children's book cover, \"The Secret of the Founder's Map,\" designed in a Pixar-animation style, capturing the adventure and the essence of Oakhaven:\n\n"
+          }
         }
       }
     ],
@@ -543,7 +821,7 @@
         "json": {
           "scene_number": 1,
           "scene_title": "Opening",
-          "scene_text": "The summer sun beat down on the community park, making the freshly cut grass smell sweet and sharp. The air buzzed with the excited shouts of kids and the thud of soccer balls. Angel, twelve years old and with feet that moved like lightning, scanned the crowd. His eyes, however, weren't on the other players. They were fixed on the table near the concession stand where Coach Davis was standing. Next to the coach, winking in the sunlight, was the grand prize: a golden trophy so big and shiny it looked like it belonged to a professional league.",
+          "scene_text": "The scent of balsa wood and model glue filled the garage, a smell Angel equated with pure happiness. He hunched over their workbench, a single beam of light from his desk lamp illuminating the delicate skeleton of a glider wing. With the focus of a surgeon, he applied a tiny bead of glue along a join, holding his breath until it set.",
           "story_title": "The Secret of the Founder's Map",
           "characters": [
             {
@@ -561,7 +839,7 @@
         "json": {
           "scene_number": 2,
           "scene_title": "Inciting Incident",
-          "scene_text": "Coach Davis blew his whistle, a sharp tweet that cut through the noise. “Alright, listen up, Fireballs! This year, we’re doing something different for our end-of-summer event. It’s the first-ever Summer Soccer Sprint! A two-on-two tournament. The winning pair takes home the gold.”",
+          "scene_text": "“Are you done with that one piece yet?” Jayson’s voice was laced with impatience. He was slumped on a stool across the bench, listlessly spinning a screwdriver on the cement floor. “We’ve been at this for three hours. My eyeballs are starting to dry out.”",
           "story_title": "The Secret of the Founder's Map",
           "characters": [
             {
@@ -579,7 +857,7 @@
         "json": {
           "scene_number": 3,
           "scene_title": "Rising Action",
-          "scene_text": "A murmur of excitement rippled through the teams. Angel felt a jolt, a surge of pure ambition. He could already picture it: that gleaming trophy on the shelf in his room. He’d win it. He had to.",
+          "scene_text": "“It has to be perfect, Jay,” Angel said without looking up. At twelve, he was a year older than Jayson, and a hundred years more patient. “Look at the blueprint. The curvature of the airfoil has to be exact, or we’ll get turbulence instead of lift.” He ran a gentle finger along the wood. “It’s like an art.”",
           "story_title": "The Secret of the Founder's Map",
           "characters": [
             {
@@ -597,7 +875,7 @@
         "json": {
           "scene_number": 4,
           "scene_title": "Climax",
-          "scene_text": "“I’ll post the team pairings now,” the coach continued, tacking a sheet of paper to the bulletin board.",
+          "scene_text": "“It’s like watching paint dry,” Jayson grumbled, kicking at a pile of wood shavings. “The school’s annual Aviation Challenge is in two weeks. At this rate, we’ll have one wing and a note that says, ‘The other one is coming soon.’” He threw his hands up. “There has to be a faster way.”",
           "story_title": "The Secret of the Founder's Map",
           "characters": [
             {
@@ -615,7 +893,7 @@
         "json": {
           "scene_number": 5,
           "scene_title": "Resolution",
-          "scene_text": "Angel’s ten-year-old brother, Jayson, bounced on the balls of his feet beside him. “I hope we get paired together! We’d be unstoppable!”",
+          "scene_text": "Angel finally looked at his brother, his brow furrowed. “The whole point is to build it ourselves. That’s the challenge. It’s supposed to take time.”",
           "story_title": "The Secret of the Founder's Map",
           "characters": [
             {
@@ -634,61 +912,61 @@
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "5009d73e-c869-4ba5-9e96-b14a17a2e04f",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/cancel",
+          "request_id": "02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 3
+          "queue_position": 0
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/cancel",
+          "request_id": "9f390b8e-68bb-4bd0-82c7-c41d79cb639e",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/9f390b8e-68bb-4bd0-82c7-c41d79cb639e",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/9f390b8e-68bb-4bd0-82c7-c41d79cb639e/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/9f390b8e-68bb-4bd0-82c7-c41d79cb639e/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 3
+          "queue_position": 0
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/cancel",
+          "request_id": "19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 8
+          "queue_position": 2
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "3ba850ec-bfc6-491c-a6df-c6f14795364a",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/cancel",
+          "request_id": "3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 7
+          "queue_position": 2
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/cancel",
+          "request_id": "606601f0-6874-4546-be5c-b7bfdc2b2590",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/606601f0-6874-4546-be5c-b7bfdc2b2590",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/606601f0-6874-4546-be5c-b7bfdc2b2590/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/606601f0-6874-4546-be5c-b7bfdc2b2590/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 5
+          "queue_position": 2
         }
       }
     ],
@@ -696,61 +974,61 @@
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "5009d73e-c869-4ba5-9e96-b14a17a2e04f",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5009d73e-c869-4ba5-9e96-b14a17a2e04f/cancel",
+          "request_id": "02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/02d9bdca-d4f1-4efe-839a-a9fbf1a1ad03/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 3
+          "queue_position": 0
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/5efc6859-f3e8-4f57-bd34-b6244ae6c5ef/cancel",
+          "request_id": "9f390b8e-68bb-4bd0-82c7-c41d79cb639e",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/9f390b8e-68bb-4bd0-82c7-c41d79cb639e",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/9f390b8e-68bb-4bd0-82c7-c41d79cb639e/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/9f390b8e-68bb-4bd0-82c7-c41d79cb639e/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 3
+          "queue_position": 0
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/c73b569e-4bd4-4acf-87ff-c52f7d8a608d/cancel",
+          "request_id": "19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/19eaa41d-a2f2-418a-83fa-b59cf2d1f1bf/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 8
+          "queue_position": 2
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "3ba850ec-bfc6-491c-a6df-c6f14795364a",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3ba850ec-bfc6-491c-a6df-c6f14795364a/cancel",
+          "request_id": "3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/3024e7c8-e3e2-4cfe-a6bd-a7d1faed27c9/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 7
+          "queue_position": 2
         }
       },
       {
         "json": {
           "status": "IN_QUEUE",
-          "request_id": "23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
-          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4",
-          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/status",
-          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/23952e70-b35b-4ce3-9d9d-cf3f83ad17f4/cancel",
+          "request_id": "606601f0-6874-4546-be5c-b7bfdc2b2590",
+          "response_url": "https://queue.fal.run/fal-ai/nano-banana/requests/606601f0-6874-4546-be5c-b7bfdc2b2590",
+          "status_url": "https://queue.fal.run/fal-ai/nano-banana/requests/606601f0-6874-4546-be5c-b7bfdc2b2590/status",
+          "cancel_url": "https://queue.fal.run/fal-ai/nano-banana/requests/606601f0-6874-4546-be5c-b7bfdc2b2590/cancel",
           "logs": null,
           "metrics": {},
-          "queue_position": 5
+          "queue_position": 2
         }
       }
     ],
@@ -759,20 +1037,7 @@
         "json": {
           "images": [
             {
-              "url": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
-              "content_type": "image/jpeg",
-              "file_name": "output.jpeg",
-              "file_size": null
-            }
-          ],
-          "description": "Here's the illustration you requested: "
-        }
-      },
-      {
-        "json": {
-          "images": [
-            {
-              "url": "https://v3.fal.media/files/zebra/sQwgsf58yiKHu-GdXOlHr.jpeg",
+              "url": "https://v3.fal.media/files/monkey/Yd7Lbu7Fn4eWq0lbqtOMo.jpeg",
               "content_type": "image/jpeg",
               "file_name": "output.jpeg",
               "file_size": null
@@ -785,20 +1050,20 @@
         "json": {
           "images": [
             {
-              "url": "https://v3.fal.media/files/penguin/GRufhbBlLR7veKMvDYiTw.jpeg",
+              "url": "https://v3.fal.media/files/rabbit/yLeh-NP1AQdjZCxktE9iV.jpeg",
               "content_type": "image/jpeg",
               "file_name": "output.jpeg",
               "file_size": null
             }
           ],
-          "description": "Here's an illustration of Angel and Jayson for your story! "
+          "description": "Absolutely! Here's the illustration for your scene, \"Inciting Incident,\" featuring Angel and Jayson.\n "
         }
       },
       {
         "json": {
           "images": [
             {
-              "url": "https://v3.fal.media/files/panda/Jm2R8eyo6i6I7vS22gpuH.jpeg",
+              "url": "https://v3.fal.media/files/rabbit/1F3C9UkSTN3LkaVgd3duX.jpeg",
               "content_type": "image/jpeg",
               "file_name": "output.jpeg",
               "file_size": null
@@ -811,32 +1076,45 @@
         "json": {
           "images": [
             {
-              "url": "https://v3.fal.media/files/rabbit/jZiu8Dg59PnSU-bhZAGS7.jpeg",
+              "url": "https://v3.fal.media/files/rabbit/uoZAfXQZxZeLg34R3o6VL.jpeg",
               "content_type": "image/jpeg",
               "file_name": "output.jpeg",
               "file_size": null
             }
           ],
-          "description": "Here's the illustration of Angel and Jayson for your storybook: "
+          "description": ""
+        }
+      },
+      {
+        "json": {
+          "images": [
+            {
+              "url": "https://v3.fal.media/files/kangaroo/1PhnzDQSdlo94hckIYCnh.jpeg",
+              "content_type": "image/jpeg",
+              "file_name": "output.jpeg",
+              "file_size": null
+            }
+          ],
+          "description": "Here's an illustration of the scene you described! "
         }
       }
     ],
     "Check Generation Status": [
       {
         "json": {
-          "imageUrl": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+          "imageUrl": "https://v3.fal.media/files/monkey/Yd7Lbu7Fn4eWq0lbqtOMo.jpeg",
           "requestId": "unknown",
           "status": "COMPLETED",
           "originalResponse": {
             "images": [
               {
-                "url": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+                "url": "https://v3.fal.media/files/monkey/Yd7Lbu7Fn4eWq0lbqtOMo.jpeg",
                 "content_type": "image/jpeg",
                 "file_name": "output.jpeg",
                 "file_size": null
               }
             ],
-            "description": "Here's the illustration you requested: "
+            "description": ""
           }
         }
       }
@@ -844,102 +1122,46 @@
     "Download Image": [
       {
         "json": {
-          "imageUrl": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+          "imageUrl": "https://v3.fal.media/files/monkey/Yd7Lbu7Fn4eWq0lbqtOMo.jpeg",
           "requestId": "unknown",
           "status": "COMPLETED",
           "originalResponse": {
             "images": [
               {
-                "url": "https://v3.fal.media/files/rabbit/FKOvbgraYV0zXIt8Lg0fG.jpeg",
+                "url": "https://v3.fal.media/files/monkey/Yd7Lbu7Fn4eWq0lbqtOMo.jpeg",
                 "content_type": "image/jpeg",
                 "file_name": "output.jpeg",
                 "file_size": null
               }
             ],
-            "description": "Here's the illustration you requested: "
+            "description": ""
+          }
+        }
+      }
+    ],
+    "Download Cover Art": [
+      {
+        "json": {
+          "imageUrl": "https://v3.fal.media/files/kangaroo/M4HeV_eONCbyttYTY4V0s.jpeg",
+          "requestId": "unknown",
+          "status": "COMPLETED",
+          "imageType": "cover",
+          "originalResponse": {
+            "images": [
+              {
+                "url": "https://v3.fal.media/files/kangaroo/M4HeV_eONCbyttYTY4V0s.jpeg",
+                "content_type": "image/jpeg",
+                "file_name": "output.jpeg",
+                "file_size": null
+              }
+            ],
+            "description": "Here's a concept for your children's book cover, \"The Secret of the Founder's Map,\" designed in a Pixar-animation style, capturing the adventure and the essence of Oakhaven:\n\n"
           }
         }
       }
     ]
   },
   "connections": {
-    "Daily Story Generation": {
-      "main": [
-        [
-          {
-            "node": "Create Story Document",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create Story Document": {
-      "main": [
-        [
-          {
-            "node": "Idea Spark",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Idea Spark": {
-      "main": [
-        [
-          {
-            "node": "Parse Idea JSON",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Idea JSON": {
-      "main": [
-        [
-          {
-            "node": "Plot Architect",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Plot Architect": {
-      "main": [
-        [
-          {
-            "node": "Parse Plot JSON",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Parse Plot JSON": {
-      "main": [
-        [
-          {
-            "node": "Narrative Weaver",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Narrative Weaver": {
-      "main": [
-        [
-          {
-            "node": "Generate Cover Art Prompt",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Generate Cover Art Prompt": {
       "main": [
         [
@@ -955,29 +1177,51 @@
       "main": [
         [
           {
-            "node": "Split Into Scenes",
+            "node": "Wait for Cover Art",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Split Into Scenes": {
+    "Wait for Cover Art": {
       "main": [
         [
           {
-            "node": "Generate Image",
+            "node": "Poll Cover Art Status",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Generate Image": {
+    "Poll Cover Art Status": {
       "main": [
         [
           {
-            "node": "Wait for Image Generation",
+            "node": "Check Cover Art Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Cover Art Status": {
+      "main": [
+        [
+          {
+            "node": "Download Cover Art",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Cover Art": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results1",
             "type": "main",
             "index": 0
           }
@@ -1013,7 +1257,177 @@
             "node": "Download Image",
             "type": "main",
             "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily Story Generation1": {
+      "main": [
+        [
+          {
+            "node": "Create Story Document1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Story Document1": {
+      "main": [
+        [
+          {
+            "node": "Idea Spark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Results1": {
+      "main": [
+        [
+          {
+            "node": "Finalize Story1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Idea Spark",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Plot Architect",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Narrative Weaver",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Plot JSON": {
+      "main": [
+        [
+          {
+            "node": "Narrative Weaver",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrative Weaver": {
+      "main": [
+        [
+          {
+            "node": "Generate Cover Art Prompt",
+            "type": "main",
+            "index": 0
           },
+          {
+            "node": "Split Into Scenes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Quiz Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Quiz Generator": {
+      "main": [
+        [
+          {
+            "node": "Parse Quiz JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Quiz JSON": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Results1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model - Quiz": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Quiz Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plot Architect": {
+      "main": [
+        [
+          {
+            "node": "Parse Plot JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Idea Spark": {
+      "main": [
+        [
+          {
+            "node": "Parse Idea JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Idea JSON": {
+      "main": [
+        [
+          {
+            "node": "Plot Architect",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
           {
             "node": "Wait for Image Generation",
             "type": "main",
@@ -1026,63 +1440,19 @@
       "main": [
         [
           {
-            "node": "Upload to Firebase Storage",
+            "node": "Aggregate Results1",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Upload to Firebase Storage": {
+    "Split Into Scenes": {
       "main": [
         [
           {
-            "node": "Aggregate Results",
+            "node": "Generate Image",
             "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Aggregate Results": {
-      "main": [
-        [
-          {
-            "node": "Finalize Story",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Gemini Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Idea Spark",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Gemini Chat Model1": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Plot Architect",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Gemini Chat Model2": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "Narrative Weaver",
-            "type": "ai_languageModel",
             "index": 0
           }
         ]
@@ -1093,7 +1463,7 @@
   "settings": {
     "executionOrder": "v1"
   },
-  "versionId": "e043c87f-e315-4c05-9f4e-6a4996bd9ec6",
+  "versionId": "447a5ca3-134a-42f7-a8c3-cf0d88d70d38",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "f20caa6f4c3b31e4e458fa492f7861e280816c740b326b85933fb4e979575bd3"
@@ -1101,10 +1471,10 @@
   "id": "GmMQLcSCBGatM8t5",
   "tags": [
     {
-      "name": "StorySphere",
-      "id": "f4t5CDRajdjLZoI5",
       "createdAt": "2025-09-30T20:44:22.843Z",
-      "updatedAt": "2025-09-30T20:44:22.843Z"
+      "updatedAt": "2025-09-30T20:44:22.843Z",
+      "id": "f4t5CDRajdjLZoI5",
+      "name": "StorySphere"
     }
   ]
 }
